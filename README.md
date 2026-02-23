@@ -1,4 +1,4 @@
-# Clash-config-generator
+# Clash-config-generator FOR TERMUX
 
 Script ini akan mengintegrasikan subconverter untuk melakukan konversi.
 Berikut script Python lengkap untuk Termux:
