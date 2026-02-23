@@ -7,10 +7,11 @@ Berikut script Python lengkap untuk Termux:
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Multi-Account to Proxies Converter - Fixed Rules
-Author: github.com/ahlawisnu
-Version: 3.2.1
-Description: Convert all protocols to Clash/Mihomo
+Multi-Account to Proxies Converter - Global Secure Edition (Fixed)
+Author: GITHUB.COM/AHLAWISNU 
+Version: 3.4.2
+Description: Convert all protocols to Clash/Mihomo with Fixed GeoSite & Syntax
+Fix: Fixed unterminated string literal error
 """
 
 import os
@@ -41,63 +42,46 @@ USER_AGENTS = [
     'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36'
 ]
 
-# AdBlock Domain Lists
+# Global AdBlock Domains (No Region Specific)
 ADBLOCK_DOMAINS = [
     'googleadservices.com', 'googlesyndication.com', 'google-analytics.com',
     'googletagmanager.com', 'googletagservices.com', 'doubleclick.net',
     'adsense.com', 'adsystem.com', 'advertising.com', 'adserver.com',
-    'adtechus.com', 'googleads.g.doubleclick.net', 'pagead2.googlesyndication.com',
-    'facebook.com/tr', 'fbcdn.net/tr', 'connect.facebook.net',
-    'graph.facebook.com', 'analytics.facebook.com',
-    'amazon-adsystem.com', 'amazonadsi.com', 'assoc-amazon.com',
-    'analytics.yahoo.com', 'ads.yahoo.com', 'gemini.yahoo.com',
-    'scorecardresearch.com', 'quantserve.com', 'mixpanel.com',
-    'segment.io', 'segment.com', 'amplitude.com', 'hotjar.com',
-    'crazyegg.com', 'optimizely.com', 'kissmetrics.com',
-    'clicky.com', 'statcounter.com', 'google-analytics.com',
+    'googleads.g.doubleclick.net', 'pagead2.googlesyndication.com',
     'ssl.google-analytics.com', 'analytics.google.com',
-    'crashlytics.com', 'firebase-settings.crashlytics.com',
-    'app-measurement.com', 'firebaseinstallations.googleapis.com',
-    'firebaseremoteconfig.googleapis.com',
-    'admarvel.com', 'admaster.com.cn', 'adsage.com', 'adsmogo.com',
-    'adsrvmedia.net', 'adwords.com', 'domob.cn', 'duomeng.cn',
-    'dwtrack.com', 'guanggao.com', 'lianmeng.com', 'omgmta.com',
-    'omniture.com', 'openx.net', 'partnerad.l.google.com',
-    'pingfore.com', 'supersonicads.com', 'uedas.com', 'umeng.com',
-    'umengcloud.com', 'usage.net', 'wlmonitor.com', 'zjtoolbar.com',
-    'popads.net', 'popcash.net', 'propellerads.com', 'adsterra.com',
-    'ad-maven.com', 'onclickads.net', 'popmyads.com', 'popunder.net',
-    'coinhive.com', 'jsecoin.com', 'cryptaloot.pro', 'webmine.pro',
-    'exoclick.com', 'adnium.com', 'juicyads.com', 'ero-advertising.com',
-]
-
-ADBLOCK_PLUS_DOMAINS = [
-    'pixel.facebook.com', 'an.facebook.com', 'analytics.twitter.com',
-    'ads-twitter.com', 'static.ads-twitter.com', 'ads.linkedin.com',
-    'analytics.pointdrive.linkedin.com', 'ads.pinterest.com',
-    'log.pinterest.com', 'analytics.pinterest.com',
+    'facebook.com/tr', 'connect.facebook.net', 'graph.facebook.com',
+    'analytics.facebook.com', 'pixel.facebook.com', 'an.facebook.com',
+    'analytics.twitter.com', 'ads-twitter.com', 'static.ads-twitter.com',
+    'ads.linkedin.com', 'analytics.pointdrive.linkedin.com',
+    'ads.pinterest.com', 'log.pinterest.com', 'analytics.pinterest.com',
     'ads.reddit.com', 'd.reddit.com', 'events.redditmedia.com',
-    'googlevideo.com/videoplayback*adformat=', 'youtube.com/api/stats/ads',
-    'youtube.com/get_video_info*adformat=', 'youtube.com/pagead',
-    'youtube.com/ptracking', 'youtube.com/api/stats/qoe?*adformat',
-    'audio-fa.scdn.co/audio/ad', 'spclient.wg.spotify.com/ads',
-    'googletagservices.com/tag/js/gpt.js', 'googleads.g.doubleclick.net',
-    'outbrain.com', 'taboola.com', 'revcontent.com', 'mgid.com',
-    'adroll.com', 'criteo.com', 'criteo.net', 'rubiconproject.com',
-    'ip2location.com', 'maxmind.com', 'ipinfo.io', 'ip-api.com',
+    'amazon-adsystem.com', 'amazonadsi.com', 'assoc-amazon.com',
     'telemetry.microsoft.com', 'watson.telemetry.microsoft.com',
     'vortex.data.microsoft.com', 'settings-win.data.microsoft.com',
     'telemetry.mozilla.org', 'incoming.telemetry.mozilla.org',
     'data.mozilla.com', 'metrics.mozilla.com',
+    'mixpanel.com', 'segment.io', 'segment.com', 'amplitude.com',
+    'hotjar.com', 'crazyegg.com', 'optimizely.com', 'kissmetrics.com',
+    'clicky.com', 'statcounter.com', 'scorecardresearch.com',
+    'quantserve.com', 'outbrain.com', 'taboola.com', 'revcontent.com',
+    'mgid.com', 'adroll.com', 'criteo.com', 'criteo.net',
+    'rubiconproject.com',
+    'crashlytics.com', 'firebase-settings.crashlytics.com',
+    'app-measurement.com', 'firebaseinstallations.googleapis.com',
+    'firebaseremoteconfig.googleapis.com', 'umeng.com', 'umengcloud.com',
+    'popads.net', 'popcash.net', 'propellerads.com', 'adsterra.com',
+    'ad-maven.com', 'onclickads.net', 'popmyads.com', 'popunder.net',
+    'exoclick.com', 'adnium.com', 'juicyads.com',
+    'coinhive.com', 'jsecoin.com', 'cryptaloot.pro', 'webmine.pro',
 ]
 
 def print_banner():
     banner = f"""
 {Colors.OKCYAN}
 ╔══════════════════════════════════════════════════════════════════╗
-║   🔗 MULTI-ACCOUNT TO PROXIES CONVERTER v3.2.1 - FIXED 🔗         ║
-║         AdBlock | Load Balance | Fallback | URL Test              ║
-║          ＡＨＬＡ｜Ai Ilustrator HTTPS:AHLAWISNU.GITHUB.IO                    ║
+║   🔗 PROXIES CONVERTER v3.4.2 - GLOBAL SECURE (FIXED) 🔗         ║
+║         Fake-IP | Anti-DNS Leak | Fixed GeoSite & Syntax         ║
+║              Load Balance | Fallback | URL Test                  ║
 ╚══════════════════════════════════════════════════════════════════╝
 {Colors.ENDC}
     """
@@ -565,12 +549,10 @@ def convert_link_to_proxy(link):
     
     return None
 
-def generate_advanced_config(proxies, enable_adblock=True, enable_adblock_plus=False):
+def generate_global_config(proxies, enable_adblock=True, enable_fake_ip=True):
     """
-    PERBAIKAN UTAMA:
-    - Nama proxy group konsisten antara definisi dan rules
-    - Tidak ada spasi di nama group
-    - Semua rule mereferensi group yang sudah didefinisikan
+    Konfigurasi global dengan GeoSite yang valid
+    PERBAIKAN: Fixed syntax error pada DNS configuration
     """
     
     proxy_names = [p['name'] for p in proxies]
@@ -578,11 +560,8 @@ def generate_advanced_config(proxies, enable_adblock=True, enable_adblock_plus=F
     if not proxy_names:
         proxy_names = ['DIRECT']
     
-    # ============================================
-    # PROXY GROUPS - DEFINISI
-    # ============================================
+    # Proxy Groups
     proxy_groups = [
-        # 1. Load Balance (hanya proxy names)
         {
             'name': 'Load-Balance',
             'type': 'load-balance',
@@ -591,8 +570,6 @@ def generate_advanced_config(proxies, enable_adblock=True, enable_adblock_plus=F
             'url': 'http://www.gstatic.com/generate_204',
             'interval': 300
         },
-        
-        # 2. URL Test
         {
             'name': 'URL-Test',
             'type': 'url-test',
@@ -602,8 +579,6 @@ def generate_advanced_config(proxies, enable_adblock=True, enable_adblock_plus=F
             'tolerance': 50,
             'lazy': True
         },
-        
-        # 3. Fallback
         {
             'name': 'Fallback',
             'type': 'fallback',
@@ -612,59 +587,132 @@ def generate_advanced_config(proxies, enable_adblock=True, enable_adblock_plus=F
             'interval': 300,
             'lazy': True
         },
-        
-        # 4. Manual Select (bisa pilih semua group di atas)
         {
             'name': 'Manual-Select',
             'type': 'select',
             'proxies': ['URL-Test', 'Fallback', 'Load-Balance', 'DIRECT'] + proxy_names
         },
-        
-        # 5. AdBlock (REJECT atau DIRECT)
         {
             'name': 'AdBlock',
             'type': 'select',
             'proxies': ['REJECT', 'DIRECT']
         },
-        
-        # 6. AdBlock Plus
         {
-            'name': 'AdBlock-Plus',
-            'type': 'select',
-            'proxies': ['REJECT', 'DIRECT']
-        },
-        
-        # 7. Proxy (untuk RULE-SET proxy, gfw, tld-not-cn)
-        {
-            'name': 'Proxy',
+            'name': 'Global',
             'type': 'select',
             'proxies': ['Manual-Select', 'URL-Test', 'Fallback', 'DIRECT'] + proxy_names
         },
-        
-        # 8. Domestic (untuk China/direct)
-        {
-            'name': 'Domestic',
-            'type': 'select',
-            'proxies': ['DIRECT', 'Manual-Select']
-        },
-        
-        # 9. Final (catch-all)
         {
             'name': 'Final',
             'type': 'select',
-            'proxies': ['Manual-Select', 'DIRECT']
+            'proxies': ['Global', 'DIRECT']
         }
     ]
     
-    # ============================================
-    # RULES - YANG MEREFERENSI PROXY GROUPS DI ATAS
-    # ============================================
+    # DNS Configuration dengan GeoSite yang VALID
+    # PERBAIKAN: Fixed syntax error pada nameserver list
+    dns_config = {
+        'enable': True,
+        'listen': '0.0.0.0:53',
+        'ipv6': True,
+        'enhanced-mode': 'fake-ip' if enable_fake_ip else 'redir-host',
+        'fake-ip-range': '198.18.0.1/16',
+        'fake-ip-filter': [
+            '*.pool.ntp.org',
+            'time.*.com',
+            'time.*.google.com',
+            'time.*.apple.com',
+            'time.*.facebook.com',
+            'time.windows.com',
+            'msftconnecttest.com',
+            'msftncsi.com',
+            '*.msftconnecttest.com',
+            'connectivitycheck.gstatic.com',
+            'clients3.google.com',
+            'captive.apple.com',
+            'gsp1.apple.com',
+            'www.msftconnecttest.com',
+            'ipv6.msftconnecttest.com',
+            '*.lan',
+            '*.local',
+            '*.localdomain',
+            'localhost',
+            'localhost.localdomain',
+            '*.ip6-local',
+            '*.ip6-loopback',
+            'stun.*.*',
+            'stun.*.*.*',
+            '*.stun.*.*',
+            '*.stun.*.*.*',
+            '*.windowsupdate.com',
+            '*.update.microsoft.com',
+            '*.icloud.com',
+            '*.icloud-content.com',
+            '*.apple-cloudkit.com',
+            '*.apple.com',
+        ],
+        
+        # Global Popular DNS
+        'default-nameserver': [
+            '8.8.8.8',
+            '8.8.4.4',
+            '1.1.1.1',
+            '1.0.0.1',
+            '9.9.9.9',
+            '149.112.112.112',
+        ],
+        
+        # PERBAIKAN: Fixed syntax error - semua string harus ditutup dengan benar
+        'nameserver': [
+            'https://dns.google/dns-query',
+            'https://cloudflare-dns.com/dns-query',
+            'https://dns.quad9.net/dns-query',
+            'tls://8.8.8.8:853',
+            'tls://1.1.1.1:853',
+            'tls://9.9.9.9:853',
+            'https://doh.opendns.com/dns-query',
+            'https://dns.adguard-dns.com/dns-query',
+            'tls://dns.adguard-dns.com:853',
+        ],
+        
+        'fallback': [
+            'https://dns.google/dns-query',
+            'https://cloudflare-dns.com/dns-query',
+            'https://dns.quad9.net/dns-query',
+            'tls://8.8.8.8:853',
+            'tls://1.1.1.1:853',
+        ],
+        
+        # PERBAIKAN: Hanya geosite yang VALID
+        'fallback-filter': {
+            'geoip': True,
+            'geoip-code': 'US',
+            'geosite': ['gfw'],
+            'ipcidr': ['240.0.0.0/4', '0.0.0.0/32', '127.0.0.0/8'],
+        },
+        
+        # PERBAIKAN: DNS Policy dengan geosite yang valid
+        'nameserver-policy': {
+            'geosite:private': [
+                'https://dns.google/dns-query',
+                'https://cloudflare-dns.com/dns-query'
+            ],
+            'geosite:cn': [
+                'https://dns.google/dns-query',
+                'https://cloudflare-dns.com/dns-query'
+            ],
+        }
+    }
+    
+    # Rules
     rules = []
     
-    # 1. LAN/Direct rules
+    # 1. LAN/Direct
     rules.extend([
         'DOMAIN-SUFFIX,local,DIRECT',
         'DOMAIN-SUFFIX,localhost,DIRECT',
+        'DOMAIN-SUFFIX,ip6-local,DIRECT',
+        'DOMAIN-SUFFIX,ip6-loopback,DIRECT',
         'IP-CIDR,127.0.0.0/8,DIRECT',
         'IP-CIDR,172.16.0.0/12,DIRECT',
         'IP-CIDR,192.168.0.0/16,DIRECT',
@@ -673,11 +721,12 @@ def generate_advanced_config(proxies, enable_adblock=True, enable_adblock_plus=F
         'IP-CIDR,224.0.0.0/4,DIRECT',
         'IP-CIDR,fe80::/10,DIRECT',
         'IP-CIDR,fc00::/7,DIRECT',
+        'IP-CIDR,::1/128,DIRECT',
     ])
     
-    # 2. AdBlock rules
+    # 2. AdBlock
     if enable_adblock:
-        for domain in ADBLOCK_DOMAINS[:50]:  # Limit to 50 for performance
+        for domain in ADBLOCK_DOMAINS[:50]:
             if domain.startswith('*.'):
                 rules.append(f'DOMAIN-SUFFIX,{domain[2:]},AdBlock')
             else:
@@ -687,17 +736,11 @@ def generate_advanced_config(proxies, enable_adblock=True, enable_adblock_plus=F
             'DOMAIN-KEYWORD,googleads,AdBlock',
             'DOMAIN-KEYWORD,googlesyndication,AdBlock',
             'DOMAIN-KEYWORD,google-analytics,AdBlock',
+            'DOMAIN-KEYWORD,facebook-tr,AdBlock',
+            'DOMAIN-KEYWORD,telemetry,AdBlock',
         ])
     
-    # 3. AdBlock Plus rules
-    if enable_adblock_plus:
-        for domain in ADBLOCK_PLUS_DOMAINS[:30]:
-            if domain.startswith('*.'):
-                rules.append(f'DOMAIN-SUFFIX,{domain[2:]},AdBlock-Plus')
-            else:
-                rules.append(f'DOMAIN-SUFFIX,{domain},AdBlock-Plus')
-    
-    # 4. Rule Providers - PERBAIKAN NAMA GROUP
+    # 3. Rule Providers
     rule_providers = {
         'reject': {
             'type': 'http',
@@ -741,6 +784,13 @@ def generate_advanced_config(proxies, enable_adblock=True, enable_adblock_plus=F
             'path': './ruleset/tld-not-cn.yaml',
             'interval': 86400
         },
+        'lancidr': {
+            'type': 'http',
+            'behavior': 'ipcidr',
+            'url': 'https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/lancidr.txt',
+            'path': './ruleset/lancidr.yaml',
+            'interval': 86400
+        },
         'cncidr': {
             'type': 'http',
             'behavior': 'ipcidr',
@@ -748,41 +798,42 @@ def generate_advanced_config(proxies, enable_adblock=True, enable_adblock_plus=F
             'path': './ruleset/cncidr.yaml',
             'interval': 86400
         },
-        'lancidr': {
+        'applications': {
             'type': 'http',
-            'behavior': 'ipcidr',
-            'url': 'https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/lancidr.txt',
-            'path': './ruleset/lancidr.yaml',
+            'behavior': 'classical',
+            'url': 'https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/applications.txt',
+            'path': './ruleset/applications.yaml',
             'interval': 86400
         }
     }
     
-    # 5. Rule Provider Rules - PERBAIKAN: gunakan nama yang benar
+    # 4. Rule Provider Rules
     rules.extend([
-        'RULE-SET,reject,AdBlock',           # AdBlock sudah didefinisikan
-        'RULE-SET,private,DIRECT',           # DIRECT adalah built-in
-        'RULE-SET,direct,Domestic',          # Domestic sudah didefinisikan
-        'RULE-SET,proxy,Proxy',              # Proxy sudah didefinisikan
-        'RULE-SET,gfw,Proxy',                # Proxy sudah didefinisikan
-        'RULE-SET,tld-not-cn,Proxy',         # Proxy sudah didefinisikan
-        'RULE-SET,cncidr,Domestic,no-resolve',
+        'RULE-SET,reject,AdBlock',
+        'RULE-SET,private,DIRECT',
+        'RULE-SET,direct,DIRECT',
+        'RULE-SET,proxy,Global',
+        'RULE-SET,gfw,Global',
+        'RULE-SET,tld-not-cn,Global',
         'RULE-SET,lancidr,DIRECT,no-resolve',
+        'RULE-SET,cncidr,Global,no-resolve',
+        'RULE-SET,applications,DIRECT',
     ])
     
-    # 6. GeoIP
+    # 5. GeoIP (hanya PRIVATE)
     rules.extend([
-        'GEOIP,CN,Domestic',
         'GEOIP,PRIVATE,DIRECT,no-resolve',
     ])
     
-    # 7. Final Match
-    rules.append('MATCH,Final')
+    # 6. Final Match
+    rules.append('MATCH,Global')
     
     # Build config
     config = {
-        'port': 7890,
+        'mixed-port': 7890,
         'socks-port': 7891,
         'redir-port': 7892,
+        'tproxy-port': 7893,
         'allow-lan': True,
         'bind-address': '*',
         'mode': 'rule',
@@ -791,23 +842,22 @@ def generate_advanced_config(proxies, enable_adblock=True, enable_adblock_plus=F
         'external-controller': '127.0.0.1:9090',
         'external-ui': './dashboard',
         
-        'dns': {
+        'profile': {
+            'store-selected': True,
+            'store-fake-ip': enable_fake_ip
+        },
+        
+        'dns': dns_config,
+        
+        'sniffer': {
             'enable': True,
-            'listen': '0.0.0.0:53',
-            'ipv6': True,
-            'default-nameserver': ['223.5.5.5', '119.29.29.29'],
-            'nameserver': [
-                'https://doh.pub/dns-query',
-                'https://dns.alidns.com/dns-query'
-            ],
-            'fallback': [
-                'https://1.1.1.1/dns-query',
-                'https://dns.google/dns-query'
-            ],
-            'fallback-filter': {
-                'geoip': True,
-                'geoip-code': 'CN',
-                'ipcidr': ['240.0.0.0/4']
+            'force-dns-mapping': True,
+            'parse-pure-ip': True,
+            'override-destination': False,
+            'sniff': {
+                'TLS': {'ports': [443, 8443]},
+                'HTTP': {'ports': [80, 8080, 8880, 2052, 2082, 2086, 2095], 'override-destination': True},
+                'QUIC': {'ports': [443, 8443]}
             }
         },
         
@@ -819,7 +869,7 @@ def generate_advanced_config(proxies, enable_adblock=True, enable_adblock_plus=F
     
     return config
 
-def save_config(proxies, filename=None, enable_adblock=True, enable_adblock_plus=False):
+def save_config(proxies, filename=None, enable_adblock=True, enable_fake_ip=True):
     try:
         import yaml
     except ImportError:
@@ -831,14 +881,15 @@ def save_config(proxies, filename=None, enable_adblock=True, enable_adblock_plus
     
     if not filename:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"proxies_fixed_{timestamp}.yaml"
+        mode = "fakeip" if enable_fake_ip else "redir"
+        filename = f"proxies_global_fixed_{mode}_{timestamp}.yaml"
     
     if not filename.endswith('.yaml'):
         filename += '.yaml'
     
     output_path = Path(filename)
     
-    config = generate_advanced_config(proxies, enable_adblock, enable_adblock_plus)
+    config = generate_global_config(proxies, enable_adblock, enable_fake_ip)
     
     with open(output_path, 'w', encoding='utf-8') as f:
         yaml.dump(config, f, allow_unicode=True, sort_keys=False, 
@@ -846,10 +897,11 @@ def save_config(proxies, filename=None, enable_adblock=True, enable_adblock_plus
     
     print(f"\n{Colors.OKGREEN}[+] Config saved: {output_path.absolute()}{Colors.ENDC}")
     print(f"{Colors.OKCYAN}    Proxies: {len(proxies)}{Colors.ENDC}")
+    print(f"{Colors.OKCYAN}    Mode: {'Fake-IP (Anti DNS Leak)' if enable_fake_ip else 'Redir-Host'}{Colors.ENDC}")
     print(f"{Colors.OKCYAN}    AdBlock: {'ON' if enable_adblock else 'OFF'}{Colors.ENDC}")
-    print(f"{Colors.OKCYAN}    AdBlock Plus: {'ON' if enable_adblock_plus else 'OFF'}{Colors.ENDC}")
-    print(f"{Colors.OKCYAN}    Proxy Groups: 9 groups{Colors.ENDC}")
-    print(f"{Colors.OKCYAN}    Status: FIXED - No name errors{Colors.ENDC}")
+    print(f"{Colors.OKCYAN}    DNS: Google + Cloudflare + Quad9 (DoH/DoT){Colors.ENDC}")
+    print(f"{Colors.OKCYAN}    GeoSite: Fixed (removed invalid lists){Colors.ENDC}")
+    print(f"{Colors.OKCYAN}    Syntax: Fixed (no unterminated strings){Colors.ENDC}")
     
     return output_path
 
@@ -991,20 +1043,22 @@ def menu_paste_links():
 def configure_and_save(proxies):
     print(f"\n{Colors.BOLD}Configuration Options:{Colors.ENDC}")
     
+    fake_ip = input(f"{Colors.OKBLUE}Enable Fake-IP mode? (y/n) [y]: {Colors.ENDC}").strip().lower()
+    enable_fake_ip = fake_ip != 'n'
+    
+    if enable_fake_ip:
+        print(f"{Colors.OKGREEN}    ✓ Fake-IP: Anti DNS leak protection enabled{Colors.ENDC}")
+    else:
+        print(f"{Colors.WARNING}    ! Redir-Host mode (DNS may leak){Colors.ENDC}")
+    
     adblock = input(f"{Colors.OKBLUE}Enable AdBlock? (y/n) [y]: {Colors.ENDC}").strip().lower()
     enable_adblock = adblock != 'n'
-    
-    if enable_adblock:
-        adblock_plus = input(f"{Colors.OKBLUE}Enable AdBlock Plus (strict)? (y/n) [n]: {Colors.ENDC}").strip().lower()
-        enable_adblock_plus = adblock_plus == 'y'
-    else:
-        enable_adblock_plus = False
     
     filename = input(f"{Colors.OKBLUE}Output filename [auto]: {Colors.ENDC}").strip()
     if not filename:
         filename = None
     
-    save_config(proxies, filename, enable_adblock, enable_adblock_plus)
+    save_config(proxies, filename, enable_adblock, enable_fake_ip)
 
 def menu_single_link():
     link = input(f"{Colors.OKBLUE}Paste proxy link: {Colors.ENDC}").strip()
@@ -1037,6 +1091,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 ```
 
 Perbaikan Utama v3.2.1:
