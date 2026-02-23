@@ -830,6 +830,7 @@ def generate_global_config(proxies, enable_adblock=True, enable_fake_ip=True):
     
     # Build config
     config = {
+        'port': 7899,
         'mixed-port': 7890,
         'socks-port': 7891,
         'redir-port': 7892,
