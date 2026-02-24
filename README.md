@@ -686,7 +686,7 @@ def generate_global_config(proxies, enable_adblock=True, enable_fake_ip=True):
         # PERBAIKAN: Hanya geosite yang VALID
         'fallback-filter': {
             'geoip': True,
-            'geoip-code': 'US',
+            'geoip-code': 'ID',
             'geosite': ['gfw'],
             'ipcidr': ['240.0.0.0/4', '0.0.0.0/32', '127.0.0.0/8'],
         },
@@ -841,7 +841,7 @@ def generate_global_config(proxies, enable_adblock=True, enable_fake_ip=True):
         'log-level': 'info',
         'ipv6': True,
         'external-controller': '127.0.0.1:9090',
-        'external-ui': './dashboard',
+        'external-ui': 'ui',
         
         'profile': {
             'store-selected': True,
