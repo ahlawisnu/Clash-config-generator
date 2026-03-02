@@ -1,1135 +1,936 @@
-# Clash-config-generator FOR TERMUX
+Berikut adalah script Python lengkap untuk Termux yang dapat kamu gunakan untuk generate konfigurasi Clash/Mihomo dengan 2 fitur utama yang diminta:
 
-Script ini akan mengintegrasikan subconverter untuk melakukan konversi.
-Berikut script Python lengkap untuk Termux:
+Script: `clash_generator.py`
 
 ```python
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Multi-Account to Proxies Converter - Global Secure Edition (Fixed)
-Author: GITHUB.COM/AHLAWISNU 
-Version: 3.4.2
-Description: Convert all protocols to Clash/Mihomo with Fixed GeoSite & Syntax
-Fix: Fixed unterminated string literal error
-"""
+
+# Script Python untuk Termux - Generator Konfigurasi Clash/Mihomo
+# Fitur: Full Config & Proxy Provider dengan semua jenis protocol
 
 import os
-import sys
+import re
 import json
+import yaml
 import base64
 import urllib.parse
-import urllib.request
-import ssl
-import random
-import re
-from datetime import datetime
-from pathlib import Path
+from urllib.parse import urlparse, parse_qs
 
-class Colors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
+class ClashConfigGenerator:
+    def __init__(self):
+        self.config_template = """proxy-providers:
+  SERVER:
+    type: file
+    path: "./akun.yaml"
+    health-check:
+      enable: true
+      url: http://www.gstatic.com/generate_204
+      interval: 300
 
-USER_AGENTS = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36'
-]
-
-# Global AdBlock Domains (No Region Specific)
-ADBLOCK_DOMAINS = [
-    'googleadservices.com', 'googlesyndication.com', 'google-analytics.com',
-    'googletagmanager.com', 'googletagservices.com', 'doubleclick.net',
-    'adsense.com', 'adsystem.com', 'advertising.com', 'adserver.com',
-    'googleads.g.doubleclick.net', 'pagead2.googlesyndication.com',
-    'ssl.google-analytics.com', 'analytics.google.com',
-    'facebook.com/tr', 'connect.facebook.net', 'graph.facebook.com',
-    'analytics.facebook.com', 'pixel.facebook.com', 'an.facebook.com',
-    'analytics.twitter.com', 'ads-twitter.com', 'static.ads-twitter.com',
-    'ads.linkedin.com', 'analytics.pointdrive.linkedin.com',
-    'ads.pinterest.com', 'log.pinterest.com', 'analytics.pinterest.com',
-    'ads.reddit.com', 'd.reddit.com', 'events.redditmedia.com',
-    'amazon-adsystem.com', 'amazonadsi.com', 'assoc-amazon.com',
-    'telemetry.microsoft.com', 'watson.telemetry.microsoft.com',
-    'vortex.data.microsoft.com', 'settings-win.data.microsoft.com',
-    'telemetry.mozilla.org', 'incoming.telemetry.mozilla.org',
-    'data.mozilla.com', 'metrics.mozilla.com',
-    'mixpanel.com', 'segment.io', 'segment.com', 'amplitude.com',
-    'hotjar.com', 'crazyegg.com', 'optimizely.com', 'kissmetrics.com',
-    'clicky.com', 'statcounter.com', 'scorecardresearch.com',
-    'quantserve.com', 'outbrain.com', 'taboola.com', 'revcontent.com',
-    'mgid.com', 'adroll.com', 'criteo.com', 'criteo.net',
-    'rubiconproject.com',
-    'crashlytics.com', 'firebase-settings.crashlytics.com',
-    'app-measurement.com', 'firebaseinstallations.googleapis.com',
-    'firebaseremoteconfig.googleapis.com', 'umeng.com', 'umengcloud.com',
-    'popads.net', 'popcash.net', 'propellerads.com', 'adsterra.com',
-    'ad-maven.com', 'onclickads.net', 'popmyads.com', 'popunder.net',
-    'exoclick.com', 'adnium.com', 'juicyads.com',
-    'coinhive.com', 'jsecoin.com', 'cryptaloot.pro', 'webmine.pro',
-]
-
-def print_banner():
-    banner = f"""
-{Colors.OKCYAN}
-╔══════════════════════════════════════════════════════════════════╗
-║   🔗 PROXIES CONVERTER v3.4.2 - GLOBAL SECURE (FIXED) 🔗         ║
-║         Fake-IP | Anti-DNS Leak | Fixed GeoSite & Syntax         ║
-║              Load Balance | Fallback | URL Test                  ║
-╚══════════════════════════════════════════════════════════════════╝
-{Colors.ENDC}
-    """
-    print(banner)
-
-def get_random_headers():
-    return {
-        'User-Agent': random.choice(USER_AGENTS),
-        'Accept': '*/*',
-        'Connection': 'keep-alive'
-    }
-
-def create_ssl_context():
-    context = ssl.create_default_context()
-    context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
-    return context
-
-def fetch_url(url, max_retries=3):
-    ssl_context = create_ssl_context()
-    
-    for attempt in range(max_retries):
-        try:
-            headers = get_random_headers()
-            req = urllib.request.Request(url, headers=headers)
-            
-            with urllib.request.urlopen(req, context=ssl_context, timeout=30) as response:
-                content = response.read()
-                
-                try:
-                    decoded = base64.b64decode(content).decode('utf-8', errors='ignore')
-                    links = [line.strip() for line in decoded.split('\n') if line.strip()]
-                except:
-                    links = [line.strip() for line in content.decode('utf-8', errors='ignore').split('\n') if line.strip()]
-                
-                return links
-                
-        except Exception as e:
-            if attempt < max_retries - 1:
-                import time
-                time.sleep(2 ** attempt)
-            else:
-                print(f"{Colors.FAIL}[!] Failed to fetch: {e}{Colors.ENDC}")
-                return []
-    
-    return []
-
-def parse_vmess(link):
-    try:
-        if not link.startswith('vmess://'):
-            return None
-        
-        b64_data = link[8:]
-        padding = 4 - len(b64_data) % 4
-        if padding != 4:
-            b64_data += '=' * padding
-        
-        json_str = base64.b64decode(b64_data).decode('utf-8')
-        data = json.loads(json_str)
-        
-        proxy = {
-            'name': data.get('ps', 'Vmess Node'),
-            'type': 'vmess',
-            'server': data.get('add', ''),
-            'port': int(data.get('port', 443)),
-            'uuid': data.get('id', ''),
-            'alterId': int(data.get('aid', 0)),
-            'cipher': data.get('scy', 'auto'),
-            'tls': data.get('tls', '') == 'tls',
-            'skip-cert-verify': True,
-            'network': data.get('net', 'tcp'),
-            'udp': True
-        }
-        
-        if data.get('net') == 'ws':
-            proxy['ws-opts'] = {
-                'path': data.get('path', '/'),
-                'headers': {'Host': data.get('host', '')} if data.get('host') else {}
-            }
-        
-        if data.get('net') == 'grpc':
-            proxy['grpc-opts'] = {'grpc-service-name': data.get('path', '')}
-        
-        if data.get('net') == 'h2':
-            proxy['h2-opts'] = {
-                'host': [data.get('host', '')],
-                'path': data.get('path', '/')
-            }
-        
-        return proxy
-        
-    except Exception as e:
-        return None
-
-def parse_vless(link):
-    try:
-        if not link.startswith('vless://'):
-            return None
-        
-        parsed = urllib.parse.urlparse(link)
-        params = urllib.parse.parse_qs(parsed.query)
-        
-        uuid = parsed.username
-        server = parsed.hostname
-        port = parsed.port or 443
-        
-        remark = urllib.parse.unquote(parsed.fragment) if parsed.fragment else 'Vless Node'
-        
-        proxy = {
-            'name': remark,
-            'type': 'vless',
-            'server': server,
-            'port': port,
-            'uuid': uuid,
-            'tls': False,
-            'skip-cert-verify': True,
-            'network': 'tcp',
-            'udp': True
-        }
-        
-        security = params.get('security', ['none'])[0]
-        if security in ['tls', 'xtls', 'reality']:
-            proxy['tls'] = True
-            proxy['servername'] = params.get('sni', [''])[0]
-        
-        net_type = params.get('type', ['tcp'])[0]
-        proxy['network'] = net_type
-        
-        if net_type == 'ws':
-            proxy['ws-opts'] = {
-                'path': params.get('path', ['/'])[0],
-                'headers': {'Host': params.get('host', [''])[0]}
-            }
-        
-        if net_type == 'grpc':
-            proxy['grpc-opts'] = {'grpc-service-name': params.get('serviceName', [''])[0]}
-        
-        if security == 'reality':
-            proxy['reality-opts'] = {
-                'public-key': params.get('pbk', [''])[0],
-                'short-id': params.get('sid', [''])[0]
-            }
-        
-        if 'flow' in params:
-            proxy['flow'] = params['flow'][0]
-        
-        return proxy
-        
-    except Exception as e:
-        return None
-
-def parse_trojan(link):
-    try:
-        if not link.startswith('trojan://'):
-            return None
-        
-        parsed = urllib.parse.urlparse(link)
-        params = urllib.parse.parse_qs(parsed.query)
-        
-        password = parsed.username
-        server = parsed.hostname
-        port = parsed.port or 443
-        remark = urllib.parse.unquote(parsed.fragment) if parsed.fragment else 'Trojan Node'
-        
-        proxy = {
-            'name': remark,
-            'type': 'trojan',
-            'server': server,
-            'port': port,
-            'password': password,
-            'skip-cert-verify': True,
-            'udp': True
-        }
-        
-        if 'sni' in params:
-            proxy['sni'] = params['sni'][0]
-        
-        net_type = params.get('type', ['tcp'])[0]
-        
-        if net_type == 'ws':
-            proxy['network'] = 'ws'
-            proxy['ws-opts'] = {
-                'path': params.get('path', ['/'])[0],
-                'headers': {'Host': params.get('host', [''])[0]}
-            }
-        
-        if net_type == 'grpc':
-            proxy['network'] = 'grpc'
-            proxy['grpc-opts'] = {'grpc-service-name': params.get('serviceName', [''])[0]}
-        
-        return proxy
-        
-    except Exception as e:
-        return None
-
-def parse_ss(link):
-    try:
-        if not link.startswith('ss://'):
-            return None
-        
-        parsed = urllib.parse.urlparse(link)
-        
-        if parsed.username:
-            userinfo = parsed.username
-            if '%' not in userinfo:
-                try:
-                    userinfo = base64.b64decode(userinfo + '==').decode('utf-8')
-                except:
-                    pass
-            
-            if ':' in userinfo:
-                method, password = userinfo.split(':', 1)
-            else:
-                method = 'aes-256-gcm'
-                password = userinfo
-        else:
-            method = 'aes-256-gcm'
-            password = ''
-        
-        params = urllib.parse.parse_qs(parsed.query)
-        plugin = params.get('plugin', [''])[0]
-        
-        remark = urllib.parse.unquote(parsed.fragment) if parsed.fragment else 'SS Node'
-        
-        proxy = {
-            'name': remark,
-            'type': 'ss',
-            'server': parsed.hostname,
-            'port': parsed.port or 8388,
-            'password': password,
-            'cipher': method,
-            'udp': True
-        }
-        
-        if plugin:
-            if 'obfs' in plugin:
-                parts = plugin.split(';')
-                plugin_opts = {}
-                for part in parts[1:]:
-                    if '=' in part:
-                        k, v = part.split('=', 1)
-                        plugin_opts[k] = v
-                
-                proxy['plugin'] = 'obfs'
-                proxy['plugin-opts'] = {
-                    'mode': plugin_opts.get('obfs', 'http'),
-                    'host': plugin_opts.get('obfs-host', '')
-                }
-            elif 'v2ray' in plugin:
-                proxy['plugin'] = 'v2ray-plugin'
-                proxy['plugin-opts'] = {
-                    'mode': 'websocket',
-                    'tls': 'tls' in plugin,
-                    'skip-cert-verify': True
-                }
-        
-        return proxy
-        
-    except Exception as e:
-        return None
-
-def parse_ssr(link):
-    try:
-        if not link.startswith('ssr://'):
-            return None
-        
-        b64_data = link[6:]
-        padding = 4 - len(b64_data) % 4
-        if padding != 4:
-            b64_data += '=' * padding
-        
-        decoded = base64.b64decode(b64_data).decode('utf-8')
-        
-        if '/?' in decoded:
-            main_part, params_part = decoded.split('/?', 1)
-        else:
-            main_part = decoded
-            params_part = ''
-        
-        parts = main_part.split(':')
-        if len(parts) < 6:
-            return None
-        
-        server = parts[0]
-        port = int(parts[1])
-        protocol = parts[2]
-        method = parts[3]
-        obfs = parts[4]
-        password_b64 = parts[5]
-        
-        password = base64.b64decode(password_b64 + '==').decode('utf-8')
-        
-        params = {}
-        if params_part:
-            params_str = base64.b64decode(params_part + '==').decode('utf-8')
-            for param in params_str.split('&'):
-                if '=' in param:
-                    k, v = param.split('=', 1)
-                    params[k] = v
-        
-        remark = base64.b64decode(params.get('remarks', '') + '==').decode('utf-8') if 'remarks' in params else 'SSR Node'
-        
-        proxy = {
-            'name': remark + ' (SSR)',
-            'type': 'ss',
-            'server': server,
-            'port': port,
-            'password': password,
-            'cipher': method,
-            'udp': True
-        }
-        
-        return proxy
-        
-    except Exception as e:
-        return None
-
-def parse_socks5(link):
-    try:
-        if not link.startswith('socks5://'):
-            return None
-        
-        parsed = urllib.parse.urlparse(link)
-        
-        remark = urllib.parse.unquote(parsed.fragment) if parsed.fragment else 'Socks5 Node'
-        
-        proxy = {
-            'name': remark,
-            'type': 'socks5',
-            'server': parsed.hostname,
-            'port': parsed.port or 1080,
-            'udp': True
-        }
-        
-        if parsed.username:
-            proxy['username'] = parsed.username
-        if parsed.password:
-            proxy['password'] = parsed.password
-        
-        return proxy
-        
-    except Exception as e:
-        return None
-
-def parse_http(link):
-    try:
-        if not link.startswith('http://') and not link.startswith('https://'):
-            return None
-        
-        if not re.match(r'^https?://[^/]+:\d+', link):
-            return None
-        
-        parsed = urllib.parse.urlparse(link)
-        
-        is_https = link.startswith('https://')
-        
-        remark = urllib.parse.unquote(parsed.fragment) if parsed.fragment else 'HTTP Node'
-        
-        proxy = {
-            'name': remark,
-            'type': 'http',
-            'server': parsed.hostname,
-            'port': parsed.port or (443 if is_https else 80)
-        }
-        
-        if parsed.username:
-            proxy['username'] = parsed.username
-        if parsed.password:
-            proxy['password'] = parsed.password
-        if is_https:
-            proxy['tls'] = True
-            proxy['skip-cert-verify'] = True
-        
-        return proxy
-        
-    except Exception as e:
-        return None
-
-def parse_hysteria(link):
-    try:
-        if not link.startswith('hysteria://'):
-            return None
-        
-        parsed = urllib.parse.urlparse(link)
-        params = urllib.parse.parse_qs(parsed.query)
-        
-        remark = urllib.parse.unquote(parsed.fragment) if parsed.fragment else 'Hysteria Node'
-        
-        proxy = {
-            'name': remark,
-            'type': 'hysteria',
-            'server': parsed.hostname,
-            'port': parsed.port or 443,
-            'auth': params.get('auth', [''])[0],
-            'protocol': params.get('protocol', ['udp'])[0],
-            'up': params.get('upmbps', ['10'])[0],
-            'down': params.get('downmbps', ['50'])[0],
-            'skip-cert-verify': True
-        }
-        
-        if 'peer' in params or 'sni' in params:
-            proxy['sni'] = params.get('peer', params.get('sni', ['']))[0]
-        
-        return proxy
-        
-    except Exception as e:
-        return None
-
-def parse_tuic(link):
-    try:
-        if not link.startswith('tuic://'):
-            return None
-        
-        parsed = urllib.parse.urlparse(link)
-        params = urllib.parse.parse_qs(parsed.query)
-        
-        uuid = parsed.username
-        password = parsed.password
-        remark = urllib.parse.unquote(parsed.fragment) if parsed.fragment else 'TUIC Node'
-        
-        proxy = {
-            'name': remark,
-            'type': 'tuic',
-            'server': parsed.hostname,
-            'port': parsed.port or 443,
-            'uuid': uuid,
-            'password': password,
-            'congestion-controller': params.get('congestion_control', ['bbr'])[0],
-            'udp-relay-mode': params.get('udp_relay_mode', ['native'])[0],
-            'skip-cert-verify': True
-        }
-        
-        if 'alpn' in params:
-            proxy['alpn'] = params['alpn'][0].split(',')
-        
-        return proxy
-        
-    except Exception as e:
-        return None
-
-def convert_link_to_proxy(link):
-    link = link.strip()
-    if not link:
-        return None
-    
-    parsers = [
-        parse_vmess,
-        parse_vless,
-        parse_trojan,
-        parse_ss,
-        parse_ssr,
-        parse_socks5,
-        parse_http,
-        parse_hysteria,
-        parse_tuic,
-    ]
-    
-    for parser in parsers:
-        try:
-            result = parser(link)
-            if result:
-                return result
-        except:
-            continue
-    
-    return None
-
-def generate_global_config(proxies, enable_adblock=True, enable_fake_ip=True):
-    """
-    Konfigurasi global dengan GeoSite yang valid
-    PERBAIKAN: Fixed syntax error pada DNS configuration
-    """
-    
-    proxy_names = [p['name'] for p in proxies]
-    
-    if not proxy_names:
-        proxy_names = ['DIRECT']
-    
-    # Proxy Groups
-    proxy_groups = [
-        {
-            'name': 'Load-Balance',
-            'type': 'load-balance',
-            'strategy': 'consistent-hashing',
-            'proxies': proxy_names,
-            'url': 'http://www.gstatic.com/generate_204',
-            'interval': 300
-        },
-        {
-            'name': 'URL-Test',
-            'type': 'url-test',
-            'proxies': proxy_names,
-            'url': 'http://www.gstatic.com/generate_204',
-            'interval': 300,
-            'tolerance': 50,
-            'lazy': True
-        },
-        {
-            'name': 'Fallback',
-            'type': 'fallback',
-            'proxies': proxy_names,
-            'url': 'http://www.gstatic.com/generate_204',
-            'interval': 300,
-            'lazy': True
-        },
-        {
-            'name': 'Manual-Select',
-            'type': 'select',
-            'proxies': ['URL-Test', 'Fallback', 'Load-Balance', 'DIRECT'] + proxy_names
-        },
-        {
-            'name': 'AdBlock',
-            'type': 'select',
-            'proxies': ['REJECT', 'DIRECT']
-        },
-        {
-            'name': 'Global',
-            'type': 'select',
-            'proxies': ['Manual-Select', 'URL-Test', 'Fallback', 'DIRECT'] + proxy_names
-        },
-        {
-            'name': 'Final',
-            'type': 'select',
-            'proxies': ['Global', 'DIRECT']
-        }
-    ]
-    
-    # DNS Configuration dengan GeoSite yang VALID
-    # PERBAIKAN: Fixed syntax error pada nameserver list
-    dns_config = {
-        'enable': True,
-        'listen': '0.0.0.0:53',
-        'ipv6': True,
-        'enhanced-mode': 'fake-ip' if enable_fake_ip else 'redir-host',
-        'fake-ip-range': '198.18.0.1/16',
-        'fake-ip-filter': [
-            '*.pool.ntp.org',
-            'time.*.com',
-            'time.*.google.com',
-            'time.*.apple.com',
-            'time.*.facebook.com',
-            'time.windows.com',
-            'msftconnecttest.com',
-            'msftncsi.com',
-            '*.msftconnecttest.com',
-            'connectivitycheck.gstatic.com',
-            'clients3.google.com',
-            'captive.apple.com',
-            'gsp1.apple.com',
-            'www.msftconnecttest.com',
-            'ipv6.msftconnecttest.com',
-            '*.lan',
-            '*.local',
-            '*.localdomain',
-            'localhost',
-            'localhost.localdomain',
-            '*.ip6-local',
-            '*.ip6-loopback',
-            'stun.*.*',
-            'stun.*.*.*',
-            '*.stun.*.*',
-            '*.stun.*.*.*',
-            '*.windowsupdate.com',
-            '*.update.microsoft.com',
-            '*.icloud.com',
-            '*.icloud-content.com',
-            '*.apple-cloudkit.com',
-            '*.apple.com',
-        ],
-        
-        # Global Popular DNS
-        'default-nameserver': [
-            '8.8.8.8',
-            '8.8.4.4',
-            '1.1.1.1',
-            '1.0.0.1',
-            '9.9.9.9',
-            '149.112.112.112',
-        ],
-        
-        # PERBAIKAN: Fixed syntax error - semua string harus ditutup dengan benar
-        'nameserver': [
-            'https://dns.google/dns-query',
-            'https://cloudflare-dns.com/dns-query',
-            'https://dns.quad9.net/dns-query',
-            'tls://8.8.8.8:853',
-            'tls://1.1.1.1:853',
-            'tls://9.9.9.9:853',
-            'https://doh.opendns.com/dns-query',
-            'https://dns.adguard-dns.com/dns-query',
-            'tls://dns.adguard-dns.com:853',
-        ],
-        
-        'fallback': [
-            'https://dns.google/dns-query',
-            'https://cloudflare-dns.com/dns-query',
-            'https://dns.quad9.net/dns-query',
-            'tls://8.8.8.8:853',
-            'tls://1.1.1.1:853',
-        ],
-        
-        # PERBAIKAN: Hanya geosite yang VALID
-        'fallback-filter': {
-            'geoip': True,
-            'geoip-code': 'ID',
-            'geosite': ['gfw'],
-            'ipcidr': ['240.0.0.0/4', '0.0.0.0/32', '127.0.0.0/8'],
-        },
-        
-        # PERBAIKAN: DNS Policy dengan geosite yang valid
-        'nameserver-policy': {
-            'geosite:private': [
-                'https://dns.google/dns-query',
-                'https://cloudflare-dns.com/dns-query'
-            ],
-            'geosite:cn': [
-                'https://dns.google/dns-query',
-                'https://cloudflare-dns.com/dns-query'
-            ],
-        }
-    }
-    
-    # Rules
-    rules = []
-    
-    # 1. LAN/Direct
-    rules.extend([
-        'DOMAIN-SUFFIX,local,DIRECT',
-        'DOMAIN-SUFFIX,localhost,DIRECT',
-        'DOMAIN-SUFFIX,ip6-local,DIRECT',
-        'DOMAIN-SUFFIX,ip6-loopback,DIRECT',
-        'IP-CIDR,127.0.0.0/8,DIRECT',
-        'IP-CIDR,172.16.0.0/12,DIRECT',
-        'IP-CIDR,192.168.0.0/16,DIRECT',
-        'IP-CIDR,10.0.0.0/8,DIRECT',
-        'IP-CIDR,100.64.0.0/10,DIRECT',
-        'IP-CIDR,224.0.0.0/4,DIRECT',
-        'IP-CIDR,fe80::/10,DIRECT',
-        'IP-CIDR,fc00::/7,DIRECT',
-        'IP-CIDR,::1/128,DIRECT',
-    ])
-    
-    # 2. AdBlock
-    if enable_adblock:
-        for domain in ADBLOCK_DOMAINS[:50]:
-            if domain.startswith('*.'):
-                rules.append(f'DOMAIN-SUFFIX,{domain[2:]},AdBlock')
-            else:
-                rules.append(f'DOMAIN-SUFFIX,{domain},AdBlock')
-        
-        rules.extend([
-            'DOMAIN-KEYWORD,googleads,AdBlock',
-            'DOMAIN-KEYWORD,googlesyndication,AdBlock',
-            'DOMAIN-KEYWORD,google-analytics,AdBlock',
-            'DOMAIN-KEYWORD,facebook-tr,AdBlock',
-            'DOMAIN-KEYWORD,telemetry,AdBlock',
-        ])
-    
-    # 3. Rule Providers
-    rule_providers = {
-        'reject': {
-            'type': 'http',
-            'behavior': 'domain',
-            'url': 'https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt',
-            'path': './ruleset/reject.yaml',
-            'interval': 86400
-        },
-        'proxy': {
-            'type': 'http',
-            'behavior': 'domain',
-            'url': 'https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/proxy.txt',
-            'path': './ruleset/proxy.yaml',
-            'interval': 86400
-        },
-        'direct': {
-            'type': 'http',
-            'behavior': 'domain',
-            'url': 'https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/direct.txt',
-            'path': './ruleset/direct.yaml',
-            'interval': 86400
-        },
-        'private': {
-            'type': 'http',
-            'behavior': 'domain',
-            'url': 'https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/private.txt',
-            'path': './ruleset/private.yaml',
-            'interval': 86400
-        },
-        'gfw': {
-            'type': 'http',
-            'behavior': 'domain',
-            'url': 'https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/gfw.txt',
-            'path': './ruleset/gfw.yaml',
-            'interval': 86400
-        },
-        'tld-not-cn': {
-            'type': 'http',
-            'behavior': 'domain',
-            'url': 'https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/tld-not-cn.txt',
-            'path': './ruleset/tld-not-cn.yaml',
-            'interval': 86400
-        },
-        'lancidr': {
-            'type': 'http',
-            'behavior': 'ipcidr',
-            'url': 'https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/lancidr.txt',
-            'path': './ruleset/lancidr.yaml',
-            'interval': 86400
-        },
-        'cncidr': {
-            'type': 'http',
-            'behavior': 'ipcidr',
-            'url': 'https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/cncidr.txt',
-            'path': './ruleset/cncidr.yaml',
-            'interval': 86400
-        },
-        'applications': {
-            'type': 'http',
-            'behavior': 'classical',
-            'url': 'https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/applications.txt',
-            'path': './ruleset/applications.yaml',
-            'interval': 86400
-        }
-    }
-    
-    # 4. Rule Provider Rules
-    rules.extend([
-        'RULE-SET,reject,AdBlock',
-        'RULE-SET,private,DIRECT',
-        'RULE-SET,direct,DIRECT',
-        'RULE-SET,proxy,Global',
-        'RULE-SET,gfw,Global',
-        'RULE-SET,tld-not-cn,Global',
-        'RULE-SET,lancidr,DIRECT,no-resolve',
-        'RULE-SET,cncidr,Global,no-resolve',
-        'RULE-SET,applications,DIRECT',
-    ])
-    
-    # 5. GeoIP (hanya PRIVATE)
-    rules.extend([
-        'GEOIP,PRIVATE,DIRECT,no-resolve',
-    ])
-    
-    # 6. Final Match
-    rules.append('MATCH,Global')
-    
-    # Build config
-    config = {
-        'port': 7899,
-        'mixed-port': 7890,
-        'socks-port': 7891,
-        'redir-port': 7892,
-        'tproxy-port': 7893,
-        'allow-lan': True,
-        'bind-address': '*',
-        'mode': 'rule',
-        'log-level': 'info',
-        'ipv6': True,
-        'external-controller': '127.0.0.1:9090',
-        'external-ui': 'ui',
-        
-        'profile': {
-            'store-selected': True,
-            'store-fake-ip': enable_fake_ip
-        },
-        
-        'dns': dns_config,
-        
-        'sniffer': {
-            'enable': True,
-            'force-dns-mapping': True,
-            'parse-pure-ip': True,
-            'override-destination': False,
-            'sniff': {
-                'TLS': {'ports': [443, 8443]},
-                'HTTP': {'ports': [80, 8080, 8880, 2052, 2082, 2086, 2095], 'override-destination': True},
-                'QUIC': {'ports': [443, 8443]}
-            }
-        },
-        
-        'proxies': proxies,
-        'proxy-groups': proxy_groups,
-        'rule-providers': rule_providers,
-        'rules': rules
-    }
-    
-    return config
-
-def save_config(proxies, filename=None, enable_adblock=True, enable_fake_ip=True):
-    try:
-        import yaml
-    except ImportError:
-        print(f"{Colors.WARNING}[*] Installing PyYAML...{Colors.ENDC}")
-        import subprocess
-        subprocess.run([sys.executable, '-m', 'pip', 'install', 'pyyaml'], 
-                      capture_output=True)
-        import yaml
-    
-    if not filename:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        mode = "fakeip" if enable_fake_ip else "redir"
-        filename = f"proxies_global_fixed_{mode}_{timestamp}.yaml"
-    
-    if not filename.endswith('.yaml'):
-        filename += '.yaml'
-    
-    output_path = Path(filename)
-    
-    config = generate_global_config(proxies, enable_adblock, enable_fake_ip)
-    
-    with open(output_path, 'w', encoding='utf-8') as f:
-        yaml.dump(config, f, allow_unicode=True, sort_keys=False, 
-                 default_flow_style=False, indent=2)
-    
-    print(f"\n{Colors.OKGREEN}[+] Config saved: {output_path.absolute()}{Colors.ENDC}")
-    print(f"{Colors.OKCYAN}    Proxies: {len(proxies)}{Colors.ENDC}")
-    print(f"{Colors.OKCYAN}    Mode: {'Fake-IP (Anti DNS Leak)' if enable_fake_ip else 'Redir-Host'}{Colors.ENDC}")
-    print(f"{Colors.OKCYAN}    AdBlock: {'ON' if enable_adblock else 'OFF'}{Colors.ENDC}")
-    print(f"{Colors.OKCYAN}    DNS: Google + Cloudflare + Quad9 (DoH/DoT){Colors.ENDC}")
-    print(f"{Colors.OKCYAN}    GeoSite: Fixed (removed invalid lists){Colors.ENDC}")
-    print(f"{Colors.OKCYAN}    Syntax: Fixed (no unterminated strings){Colors.ENDC}")
-    
-    return output_path
-
-def process_links(links):
-    proxies = []
-    stats = {
-        'vmess': 0, 'vless': 0, 'trojan': 0, 'ss': 0, 
-        'ssr': 0, 'socks5': 0, 'http': 0, 'hysteria': 0,
-        'tuic': 0, 'failed': 0
-    }
-    
-    print(f"\n{Colors.OKBLUE}[*] Processing {len(links)} links...{Colors.ENDC}\n")
-    
-    for i, link in enumerate(links, 1):
-        link = link.strip()
-        if not link:
-            continue
-        
-        proxy = convert_link_to_proxy(link)
-        
-        if proxy:
-            original_name = proxy['name']
-            counter = 1
-            existing_names = [p['name'] for p in proxies]
-            while proxy['name'] in existing_names:
-                proxy['name'] = f"{original_name}_{counter}"
-                counter += 1
-            
-            proxies.append(proxy)
-            ptype = proxy['type']
-            if ptype in stats:
-                stats[ptype] += 1
-            print(f"{Colors.OKGREEN}[{i}] ✓ {proxy['type'].upper()}: {proxy['name'][:50]}{Colors.ENDC}")
-        else:
-            stats['failed'] += 1
-            print(f"{Colors.FAIL}[{i}] ✗ Failed: {link[:60]}...{Colors.ENDC}")
-    
-    print(f"\n{Colors.BOLD}Conversion Stats:{Colors.ENDC}")
-    for ptype, count in stats.items():
-        if count > 0:
-            print(f"  {Colors.OKCYAN}{ptype.upper()}: {count}{Colors.ENDC}")
-    
-    return proxies
-
-def main_menu():
-    while True:
-        print_banner()
-        print(f"""
-{Colors.BOLD}MENU:{Colors.ENDC}
-{Colors.OKCYAN}[1]{Colors.ENDC} Convert from Subscription URL
-{Colors.OKCYAN}[2]{Colors.ENDC} Convert from File (txt)
-{Colors.OKCYAN}[3]{Colors.ENDC} Paste Links Directly
-{Colors.OKCYAN}[4]{Colors.ENDC} Convert Single Link (Test)
-{Colors.OKCYAN}[0]{Colors.ENDC} Exit
-        """)
-        
-        choice = input(f"{Colors.BOLD}Select: {Colors.ENDC}").strip()
-        
-        if choice == '1':
-            menu_subscription_url()
-        elif choice == '2':
-            menu_file_input()
-        elif choice == '3':
-            menu_paste_links()
-        elif choice == '4':
-            menu_single_link()
-        elif choice == '0':
-            print(f"{Colors.OKGREEN}Goodbye!{Colors.ENDC}")
-            break
-        else:
-            print(f"{Colors.FAIL}[!] Invalid choice{Colors.ENDC}")
-        
-        input(f"\n{Colors.OKCYAN}Press Enter to continue...{Colors.ENDC}")
-
-def menu_subscription_url():
-    url = input(f"{Colors.OKBLUE}Subscription URL: {Colors.ENDC}").strip()
-    if not url:
-        return
-    
-    print(f"\n{Colors.OKBLUE}[*] Fetching subscription...{Colors.ENDC}")
-    links = fetch_url(url)
-    
-    if not links:
-        print(f"{Colors.FAIL}[!] No links found{Colors.ENDC}")
-        return
-    
-    print(f"{Colors.OKGREEN}[+] Found {len(links)} links{Colors.ENDC}")
-    
-    proxies = process_links(links)
-    
-    if proxies:
-        configure_and_save(proxies)
-
-def menu_file_input():
-    file_path = input(f"{Colors.OKBLUE}File path: {Colors.ENDC}").strip()
-    
-    if not Path(file_path).exists():
-        print(f"{Colors.FAIL}[!] File not found{Colors.ENDC}")
-        return
-    
-    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-        content = f.read()
-    
-    try:
-        decoded = base64.b64decode(content).decode('utf-8')
-        links = [line.strip() for line in decoded.split('\n') if line.strip()]
-    except:
-        links = [line.strip() for line in content.split('\n') if line.strip()]
-    
-    print(f"{Colors.OKGREEN}[+] Found {len(links)} lines{Colors.ENDC}")
-    
-    proxies = process_links(links)
-    
-    if proxies:
-        configure_and_save(proxies)
-
-def menu_paste_links():
-    print(f"{Colors.OKBLUE}Paste links (one per line, empty line to finish):{Colors.ENDC}")
-    
-    links = []
-    while True:
-        try:
-            line = input()
-            if not line.strip():
-                break
-            links.append(line)
-        except EOFError:
-            break
-    
-    if not links:
-        print(f"{Colors.FAIL}[!] No links provided{Colors.ENDC}")
-        return
-    
-    proxies = process_links(links)
-    
-    if proxies:
-        configure_and_save(proxies)
-
-def configure_and_save(proxies):
-    print(f"\n{Colors.BOLD}Configuration Options:{Colors.ENDC}")
-    
-    fake_ip = input(f"{Colors.OKBLUE}Enable Fake-IP mode? (y/n) [y]: {Colors.ENDC}").strip().lower()
-    enable_fake_ip = fake_ip != 'n'
-    
-    if enable_fake_ip:
-        print(f"{Colors.OKGREEN}    ✓ Fake-IP: Anti DNS leak protection enabled{Colors.ENDC}")
-    else:
-        print(f"{Colors.WARNING}    ! Redir-Host mode (DNS may leak){Colors.ENDC}")
-    
-    adblock = input(f"{Colors.OKBLUE}Enable AdBlock? (y/n) [y]: {Colors.ENDC}").strip().lower()
-    enable_adblock = adblock != 'n'
-    
-    filename = input(f"{Colors.OKBLUE}Output filename [auto]: {Colors.ENDC}").strip()
-    if not filename:
-        filename = None
-    
-    save_config(proxies, filename, enable_adblock, enable_fake_ip)
-
-def menu_single_link():
-    link = input(f"{Colors.OKBLUE}Paste proxy link: {Colors.ENDC}").strip()
-    
-    proxy = convert_link_to_proxy(link)
-    
-    if proxy:
-        print(f"\n{Colors.OKGREEN}[+] Converted:{Colors.ENDC}")
-        print(f"{Colors.BOLD}Type:{Colors.ENDC} {proxy['type']}")
-        print(f"{Colors.BOLD}Name:{Colors.ENDC} {proxy['name']}")
-        print(f"\n{Colors.OKCYAN}YAML:{Colors.ENDC}")
-        
-        try:
-            import yaml
-            print(yaml.dump([proxy], allow_unicode=True, default_flow_style=False))
-        except:
-            print(str(proxy))
-    else:
-        print(f"{Colors.FAIL}[!] Failed to convert link{Colors.ENDC}")
-
-def main():
-    try:
-        main_menu()
-    except KeyboardInterrupt:
-        print(f"\n{Colors.WARNING}Interrupted{Colors.ENDC}")
-        sys.exit(0)
-    except Exception as e:
-        print(f"\n{Colors.FAIL}[!] Error: {e}{Colors.ENDC}")
-        sys.exit(1)
-
-if __name__ == "__main__":
-    main()
-
-```
-
-Perbaikan Utama v3.2.1:
-
-1. Nama Group Konsisten
-
-Sebelum (Error)	Sesudah (Fixed)	
-`🚀 Proxy`	`Proxy` (tanpa emoji/spasi)	
-`📱 Select`	`Manual-Select`	
-`🌐 Final`	`Final`	
-`⚖️ Load Balance`	`Load-Balance`	
-`⚡ URL Test`	`URL-Test`	
-`🔄 Fallback`	`Fallback`	
-`🛑 AdBlock`	`AdBlock`	
-`🚫 AdBlock Plus`	`AdBlock-Plus`	
-`🏠 Domestic`	`Domestic`	
-
-2. Built-in Names yang Valid
-- `DIRECT` - Selalu tersedia di Clash
-- `REJECT` - Selalu tersedia di Clash
-
-3. Struktur Rules yang Benar
-
-```yaml
 proxy-groups:
-  - name: Proxy          # ← Didefinisikan di sini
+  - name: MANUAL
     type: select
-    proxies: [...]
+    proxies:
+      - BEST-PING
+      - FALLBACK
+      - LB
+    use:
+      - SERVER
+    
+  - name: UMUM
+    type: select
+    proxies:
+      - MANUAL
+      - BEST-PING
+      - FALLBACK
+      - LB
+    use:
+      - SERVER
+    
+  - name: FINAL
+    type: select
+    proxies:
+      - UMUM
+      - DIRECT
+      
+  - name: ADBLOCK+
+    type: select
+    proxies:
+      - REJECT
+      - FALLBACK
+
+  - name: FALLBACK
+    type: fallback
+    use:
+      - SERVER
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+
+  - name: BEST-PING
+    type: url-test
+    use:
+      - SERVER
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 100
+
+  - name: LB
+    type: load-balance
+    strategy: round-robin
+    use:
+      - SERVER
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    
+port: 7893
+socks-port: 7891
+redir-port: 7892
+mixed-port: 7890
+tproxy-port: 7895
+ipv6: false
+mode: rule
+log-level: silent
+allow-lan: true
+external-controller: 0.0.0.0:9090
+secret: ""
+bind-address: "*"
+unified-delay: true
+
+profile:
+  store-selected: true
+  store-fake-ip: true
+
+dns:
+  enable: true
+  ipv6: false
+  use-host: true
+  enhanced-mode: fake-ip
+  listen: 0.0.0.0:7874
+  nameserver:
+    - 94.140.14.140
+    - 94.140.14.141
+    - https://unfiltered.adguard-dns.com/dns-query
+  fallback:
+    - https://cloudflare-dns.com/dns-query
+    - https://dns.google/dns-query
+  default-nameserver:
+    - 9.9.9.9
+    - 8.8.8.8
+    - 1.1.1.1
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "*.lan"
+    - "*.localdomain"
+    - "*.example"
+    - "*.invalid"
+    - "*.localhost"
+    - "*.test"
+    - "*.local"
+    - "*.home.arpa"
+    - time.*.com
+    - time.*.gov
+    - time.*.edu.cn
+    - time.*.apple.com
+    - time1.*.com
+    - time2.*.com
+    - time3.*.com
+    - time4.*.com
+    - time5.*.com
+    - time6.*.com
+    - time7.*.com
+    - ntp.*.com
+    - ntp1.*.com
+    - ntp2.*.com
+    - ntp3.*.com
+    - ntp4.*.com
+    - ntp5.*.com
+    - ntp6.*.com
+    - ntp7.*.com
+    - "*.time.edu.cn"
+    - "*.ntp.org.cn"
+    - +.pool.ntp.org
+    - time1.cloud.tencent.com
+    - music.163.com
+    - "*.music.163.com"
+    - "*.126.net"
+    - musicapi.taihe.com
+    - music.taihe.com
+    - songsearch.kugou.com
+    - trackercdn.kugou.com
+    - "*.kuwo.cn"
+    - api-jooxtt.sanook.com
+    - api.joox.com
+    - joox.com
+    - y.qq.com
+    - "*.y.qq.com"
+    - streamoc.music.tc.qq.com
+    - mobileoc.music.tc.qq.com
+    - isure.stream.qqmusic.qq.com
+    - dl.stream.qqmusic.qq.com
+    - aqqmusic.tc.qq.com
+    - amobile.music.tc.qq.com
+    - "*.xiami.com"
+    - "*.music.migu.cn"
+    - music.migu.cn
+    - "*.msftconnecttest.com"
+    - "*.msftncsi.com"
+    - msftconnecttest.com
+    - msftncsi.com
+    - localhost.ptlogin2.qq.com
+    - localhost.sec.qq.com
+    - +.srv.nintendo.net
+    - +.stun.playstation.net
+    - xbox.*.microsoft.com
+    - xnotify.xboxlive.com
+    - +.battlenet.com.cn
+    - +.wotgame.cn
+    - +.wggames.cn
+    - +.wowsgame.cn
+    - +.wargaming.net
+    - proxy.golang.org
+    - stun.*.*
+    - stun.*.*.*
+    - +.stun.*.*
+    - +.stun.*.*.*
+    - +.stun.*.*.*.*
+    - heartbeat.belkin.com
+    - "*.linksys.com"
+    - "*.linksyssmartwifi.com"
+    - "*.router.asus.com"
+    - mesu.apple.com
+    - swscan.apple.com
+    - swquery.apple.com
+    - swdownload.apple.com
+    - swcdn.apple.com
+    - swdist.apple.com
+    - lens.l.google.com
+    - stun.l.google.com
+    - +.nflxvideo.net
+    - "*.square-enix.com"
+    - "*.finalfantasyxiv.com"
+    - "*.ffxiv.com"
+    - "*.mcdn.bilivideo.cn"
+    - +.media.dssott.com
+
+rule-providers:
+  ABPindo:
+    type: http
+    behavior: domain
+    format: text
+    path: "./rule_provider/ABPindo.txt"
+    url: https://raw.githubusercontent.com/zzzt27/clash-AdsBlock/main/ABPindo.txt
+    interval: 86400
+
+  oisd_nsfw🔞:
+    type: http
+    behavior: domain
+    format: text
+    path: "./rule_provider/oisd_nsfw.txt"
+    url: https://raw.githubusercontent.com/zzzt27/clash-AdsBlock/main/oisd_nsfw.txt
+    interval: 86400
+
+  oisd_big:
+    type: http
+    behavior: domain
+    format: text
+    path: "./rule_provider/oisd_big.txt"
+    url: https://raw.githubusercontent.com/zzzt27/clash-AdsBlock/main/oisd_big.txt
+    interval: 86400
+
+  rule_adblock:
+    type: http
+    url: https://raw.githubusercontent.com/ahlawisnu/CLASH/refs/heads/main/adblock.yaml
+    behavior: classical
+    path: ./rule_provider/adblock.yaml
+
+  rule_haram:
+    type: http
+    url: https://raw.githubusercontent.com/ahlawisnu/CLASH/refs/heads/main/haram.yaml
+    behavior: domain
+    path: ./rule_provider/haram.yaml
+
+  rule_18+:
+    type: http
+    url: https://raw.githubusercontent.com/ahlawisnu/CLASH/refs/heads/main/18+.yaml
+    behavior: domain
+    path: ./rule_provider/18+.yaml
+    
+
+tun:
+  enable: true
+  dns-hijack:
+    - any:53
 
 rules:
-  - RULE-SET,proxy,Proxy  # ← Direferensi di sini (sama persis)
+  - RULE-SET,ABPindo,ADBLOCK+
+  - RULE-SET,oisd_nsfw🔞,ADBLOCK+
+  - RULE-SET,oisd_big,ADBLOCK+
+  # === FAMILY SAFE FILTER ===
+  - RULE-SET,rule_18+,ADBLOCK+
+  - RULE-SET,rule_haram,ADBLOCK+
+  - RULE-SET,rule_adblock,ADBLOCK+
+  
+  # ====== to do =======
+  
+# - DOMAIN-KEYWORD,tiktok,ADBLOCK+
+# - DOMAIN-KEYWORD,bigo,ADBLOCK+
+# - DOMAIN-KEYWORD,live,ADBLOCK+
+
+  # === FINAL ROUTING ===
+  - MATCH,FINAL"""
+        
+        self.proxies = []
+        self.proxy_counter = 0
+
+    def decode_base64(self, data):
+        """Decode base64 dengan padding handling"""
+        try:
+            missing_padding = len(data) % 4
+            if missing_padding:
+                data += '=' * (4 - missing_padding)
+            return base64.b64decode(data).decode('utf-8')
+        except:
+            return None
+
+    def parse_vmess(self, url):
+        """Parse VMess URL"""
+        try:
+            if not url.startswith('vmess://'):
+                return None
+            
+            b64_data = url[8:]
+            json_str = self.decode_base64(b64_data)
+            if not json_str:
+                return None
+            
+            data = json.loads(json_str)
+            
+            proxy = {
+                'name': data.get('ps', f'VMess-{self.proxy_counter}'),
+                'type': 'vmess',
+                'server': data.get('add', ''),
+                'port': int(data.get('port', 443)),
+                'uuid': data.get('id', ''),
+                'alterId': int(data.get('aid', 0)),
+                'cipher': data.get('scy', 'auto'),
+                'tls': data.get('tls', '') == 'tls',
+                'skip-cert-verify': True,
+                'servername': data.get('sni', ''),
+                'network': data.get('net', 'tcp'),
+            }
+            
+            # Handle ws/grpc network
+            if proxy['network'] == 'ws':
+                proxy['ws-opts'] = {
+                    'path': data.get('path', '/'),
+                    'headers': {
+                        'Host': data.get('host', '')
+                    }
+                }
+            elif proxy['network'] == 'grpc':
+                proxy['grpc-opts'] = {
+                    'grpc-service-name': data.get('path', '')
+                }
+            
+            self.proxy_counter += 1
+            return proxy
+        except Exception as e:
+            print(f"Error parsing VMess: {e}")
+            return None
+
+    def parse_vless(self, url):
+        """Parse VLESS URL"""
+        try:
+            if not url.startswith('vless://'):
+                return None
+            
+            parsed = urlparse(url)
+            uuid = parsed.username
+            server = parsed.hostname
+            port = parsed.port
+            
+            query = parse_qs(parsed.query)
+            
+            proxy = {
+                'name': urllib.parse.unquote(parsed.fragment) if parsed.fragment else f'VLESS-{self.proxy_counter}',
+                'type': 'vless',
+                'server': server,
+                'port': port,
+                'uuid': uuid,
+                'cipher': 'none',
+                'tls': 'security' in query and query['security'][0] == 'tls',
+                'skip-cert-verify': True,
+                'servername': query.get('sni', [''])[0],
+                'network': query.get('type', ['tcp'])[0],
+            }
+            
+            # Handle flow
+            if 'flow' in query:
+                proxy['flow'] = query['flow'][0]
+            
+            # Handle ws/grpc
+            if proxy['network'] == 'ws':
+                proxy['ws-opts'] = {
+                    'path': query.get('path', ['/'])[0],
+                    'headers': {
+                        'Host': query.get('host', [''])[0]
+                    }
+                }
+            elif proxy['network'] == 'grpc':
+                proxy['grpc-opts'] = {
+                    'grpc-service-name': query.get('serviceName', [''])[0]
+                }
+            
+            # Handle reality
+            if 'security' in query and query['security'][0] == 'reality':
+                proxy['reality-opts'] = {
+                    'public-key': query.get('pbk', [''])[0],
+                    'short-id': query.get('sid', [''])[0]
+                }
+                proxy['client-fingerprint'] = query.get('fp', ['chrome'])[0]
+            
+            self.proxy_counter += 1
+            return proxy
+        except Exception as e:
+            print(f"Error parsing VLESS: {e}")
+            return None
+
+    def parse_trojan(self, url):
+        """Parse Trojan URL"""
+        try:
+            if not url.startswith('trojan://'):
+                return None
+            
+            parsed = urlparse(url)
+            password = parsed.username
+            server = parsed.hostname
+            port = parsed.port
+            
+            query = parse_qs(parsed.query)
+            
+            proxy = {
+                'name': urllib.parse.unquote(parsed.fragment) if parsed.fragment else f'Trojan-{self.proxy_counter}',
+                'type': 'trojan',
+                'server': server,
+                'port': port,
+                'password': password,
+                'skip-cert-verify': True,
+            }
+            
+            if 'sni' in query:
+                proxy['sni'] = query['sni'][0]
+            
+            if 'type' in query:
+                net_type = query['type'][0]
+                proxy['network'] = net_type
+                
+                if net_type == 'ws':
+                    proxy['ws-opts'] = {
+                        'path': query.get('path', ['/'])[0],
+                        'headers': {
+                            'Host': query.get('host', [''])[0]
+                        }
+                    }
+                elif net_type == 'grpc':
+                    proxy['grpc-opts'] = {
+                        'grpc-service-name': query.get('serviceName', [''])[0]
+                    }
+            
+            self.proxy_counter += 1
+            return proxy
+        except Exception as e:
+            print(f"Error parsing Trojan: {e}")
+            return None
+
+    def parse_ss(self, url):
+        """Parse Shadowsocks URL"""
+        try:
+            if not url.startswith('ss://'):
+                return None
+            
+            # Handle SIP002 format
+            if url.startswith('ss://'):
+                parsed = urlparse(url)
+                
+                # Decode base64 userinfo
+                userinfo = parsed.username
+                if userinfo:
+                    # base64 encoded method:password
+                    decoded = self.decode_base64(userinfo)
+                    if decoded and ':' in decoded:
+                        method, password = decoded.split(':', 1)
+                    else:
+                        return None
+                else:
+                    return None
+                
+                server = parsed.hostname
+                port = parsed.port
+                
+                proxy = {
+                    'name': urllib.parse.unquote(parsed.fragment) if parsed.fragment else f'SS-{self.proxy_counter}',
+                    'type': 'ss',
+                    'server': server,
+                    'port': port,
+                    'cipher': method,
+                    'password': password,
+                }
+                
+                # Handle plugin
+                query = parse_qs(parsed.query)
+                if 'plugin' in query:
+                    plugin_str = query['plugin'][0]
+                    if 'obfs' in plugin_str:
+                        # simple-obfs
+                        parts = plugin_str.split(';')
+                        proxy['plugin'] = 'obfs'
+                        for part in parts[1:]:
+                            if '=' in part:
+                                key, val = part.split('=', 1)
+                                if key == 'obfs':
+                                    proxy['plugin-opts'] = {'mode': val}
+                                elif key == 'obfs-host':
+                                    if 'plugin-opts' not in proxy:
+                                        proxy['plugin-opts'] = {}
+                                    proxy['plugin-opts']['host'] = val
+                
+                self.proxy_counter += 1
+                return proxy
+        except Exception as e:
+            print(f"Error parsing SS: {e}")
+            return None
+
+    def parse_ssr(self, url):
+        """Parse ShadowsocksR URL"""
+        try:
+            if not url.startswith('ssr://'):
+                return None
+            
+            decoded = self.decode_base64(url[6:])
+            if not decoded:
+                return None
+            
+            # Format: server:port:protocol:method:obfs:password_base64/?params_base64
+            match = re.match(r'([^:]+):(\d+):([^:]+):([^:]+):([^:]+):([^/]+)/?\?(.*)', decoded)
+            if not match:
+                return None
+            
+            server, port, protocol, method, obfs, password_b64, params = match.groups()
+            password = self.decode_base64(password_b64) or password_b64
+            
+            # Parse params
+            param_dict = {}
+            for param in params.split('&'):
+                if '=' in param:
+                    k, v = param.split('=', 1)
+                    param_dict[k] = self.decode_base64(v) or v
+            
+            proxy = {
+                'name': param_dict.get('remarks', f'SSR-{self.proxy_counter}'),
+                'type': 'ssr',
+                'server': server,
+                'port': int(port),
+                'cipher': method,
+                'password': password,
+                'protocol': protocol,
+                'obfs': obfs,
+                'protocol-param': param_dict.get('protoparam', ''),
+                'obfs-param': param_dict.get('obfsparam', ''),
+            }
+            
+            self.proxy_counter += 1
+            return proxy
+        except Exception as e:
+            print(f"Error parsing SSR: {e}")
+            return None
+
+    def parse_hysteria(self, url):
+        """Parse Hysteria/Hysteria2 URL"""
+        try:
+            if url.startswith('hysteria2://') or url.startswith('hy2://'):
+                parsed = urlparse(url)
+                password = parsed.username
+                server = parsed.hostname
+                port = parsed.port or 443
+                
+                query = parse_qs(parsed.query)
+                
+                proxy = {
+                    'name': urllib.parse.unquote(parsed.fragment) if parsed.fragment else f'Hysteria2-{self.proxy_counter}',
+                    'type': 'hysteria2',
+                    'server': server,
+                    'port': port,
+                    'password': password,
+                    'skip-cert-verify': True,
+                }
+                
+                if 'sni' in query:
+                    proxy['sni'] = query['sni'][0]
+                
+                if 'obfs' in query:
+                    proxy['obfs'] = query['obfs'][0]
+                    if 'obfs-password' in query:
+                        proxy['obfs-password'] = query['obfs-password'][0]
+                
+                self.proxy_counter += 1
+                return proxy
+                
+            elif url.startswith('hysteria://'):
+                parsed = urlparse(url)
+                server = parsed.hostname
+                port = parsed.port
+                
+                query = parse_qs(parsed.query)
+                
+                proxy = {
+                    'name': urllib.parse.unquote(parsed.fragment) if parsed.fragment else f'Hysteria-{self.proxy_counter}',
+                    'type': 'hysteria',
+                    'server': server,
+                    'port': port,
+                    'skip-cert-verify': True,
+                }
+                
+                if 'protocol' in query:
+                    proxy['protocol'] = query['protocol'][0]
+                if 'auth' in query:
+                    proxy['auth-str'] = query['auth'][0]
+                if 'upmbps' in query:
+                    proxy['up'] = query['upmbps'][0]
+                if 'downmbps' in query:
+                    proxy['down'] = query['downmbps'][0]
+                if 'sni' in query:
+                    proxy['sni'] = query['sni'][0]
+                if 'alpn' in query:
+                    proxy['alpn'] = query['alpn'][0].split(',')
+                
+                self.proxy_counter += 1
+                return proxy
+                
+        except Exception as e:
+            print(f"Error parsing Hysteria: {e}")
+            return None
+
+    def parse_tuic(self, url):
+        """Parse TUIC URL"""
+        try:
+            if not url.startswith('tuic://'):
+                return None
+            
+            parsed = urlparse(url)
+            uuid = parsed.username
+            password = parsed.password
+            server = parsed.hostname
+            port = parsed.port
+            
+            query = parse_qs(parsed.query)
+            
+            proxy = {
+                'name': urllib.parse.unquote(parsed.fragment) if parsed.fragment else f'TUIC-{self.proxy_counter}',
+                'type': 'tuic',
+                'server': server,
+                'port': port,
+                'uuid': uuid,
+                'password': password,
+                'skip-cert-verify': True,
+            }
+            
+            if 'congestion_control' in query:
+                proxy['congestion-controller'] = query['congestion_control'][0]
+            if 'udp_relay_mode' in query:
+                proxy['udp-relay-mode'] = query['udp_relay_mode'][0]
+            if 'sni' in query:
+                proxy['sni'] = query['sni'][0]
+            if 'alpn' in query:
+                proxy['alpn'] = query['alpn'][0].split(',')
+            
+            self.proxy_counter += 1
+            return proxy
+        except Exception as e:
+            print(f"Error parsing TUIC: {e}")
+            return None
+
+    def parse_wireguard(self, url):
+        """Parse WireGuard URL"""
+        try:
+            if not url.startswith('wg://') and not url.startswith('wireguard://'):
+                return None
+            
+            parsed = urlparse(url)
+            server = parsed.hostname
+            port = parsed.port
+            
+            query = parse_qs(parsed.query)
+            
+            proxy = {
+                'name': urllib.parse.unquote(parsed.fragment) if parsed.fragment else f'WG-{self.proxy_counter}',
+                'type': 'wireguard',
+                'server': server,
+                'port': port,
+            }
+            
+            if 'publickey' in query:
+                proxy['public-key'] = query['publickey'][0]
+            if 'privatekey' in query:
+                proxy['private-key'] = query['privatekey'][0]
+            if 'presharedkey' in query:
+                proxy['pre-shared-key'] = query['presharedkey'][0]
+            if 'mtu' in query:
+                proxy['mtu'] = int(query['mtu'][0])
+            if 'reserved' in query:
+                proxy['reserved'] = query['reserved'][0].split(',')
+            
+            self.proxy_counter += 1
+            return proxy
+        except Exception as e:
+            print(f"Error parsing WireGuard: {e}")
+            return None
+
+    def parse_socks_http(self, url):
+        """Parse SOCKS5/HTTP proxy URL"""
+        try:
+            if url.startswith('socks5://') or url.startswith('socks://'):
+                parsed = urlparse(url)
+                proxy = {
+                    'name': urllib.parse.unquote(parsed.fragment) if parsed.fragment else f'SOCKS5-{self.proxy_counter}',
+                    'type': 'socks5',
+                    'server': parsed.hostname,
+                    'port': parsed.port,
+                }
+                if parsed.username:
+                    proxy['username'] = parsed.username
+                if parsed.password:
+                    proxy['password'] = parsed.password
+                
+                self.proxy_counter += 1
+                return proxy
+                
+            elif url.startswith('http://') or url.startswith('https://'):
+                parsed = urlparse(url)
+                proxy = {
+                    'name': urllib.parse.unquote(parsed.fragment) if parsed.fragment else f'HTTP-{self.proxy_counter}',
+                    'type': 'http',
+                    'server': parsed.hostname,
+                    'port': parsed.port,
+                }
+                if parsed.username:
+                    proxy['username'] = parsed.username
+                if parsed.password:
+                    proxy['password'] = parsed.password
+                if url.startswith('https://'):
+                    proxy['tls'] = True
+                    proxy['skip-cert-verify'] = True
+                
+                self.proxy_counter += 1
+                return proxy
+                
+        except Exception as e:
+            print(f"Error parsing SOCKS/HTTP: {e}")
+            return None
+
+    def parse_url(self, url):
+        """Parse single URL dan return proxy config"""
+        url = url.strip()
+        if not url:
+            return None
+        
+        parsers = [
+            self.parse_vmess,
+            self.parse_vless,
+            self.parse_trojan,
+            self.parse_ss,
+            self.parse_ssr,
+            self.parse_hysteria,
+            self.parse_tuic,
+            self.parse_wireguard,
+            self.parse_socks_http,
+        ]
+        
+        for parser in parsers:
+            result = parser(url)
+            if result:
+                return result
+        
+        return None
+
+    def parse_subscription(self, data):
+        """Parse subscription data (base64 atau plain text)"""
+        proxies = []
+        
+        # Coba decode base64 dulu
+        decoded = self.decode_base64(data)
+        if decoded:
+            lines = decoded.strip().split('\n')
+        else:
+            lines = data.strip().split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            
+            proxy = self.parse_url(line)
+            if proxy:
+                proxies.append(proxy)
+        
+        return proxies
+
+    def generate_full_config(self, proxies):
+        """Generate full config dengan proxies langsung (tanpa proxy provider)"""
+        config = yaml.safe_load(self.config_template)
+        
+        # Hapus proxy-providers
+        if 'proxy-providers' in config:
+            del config['proxy-providers']
+        
+        # Update proxy-groups untuk tidak menggunakan provider
+        for group in config.get('proxy-groups', []):
+            if 'use' in group:
+                del group['use']
+            # Tambah proxies ke grup yang perlu
+            if group.get('type') in ['fallback', 'url-test', 'load-balance']:
+                if 'proxies' not in group:
+                    group['proxies'] = [p['name'] for p in proxies]
+        
+        # Tambah proxies
+        config['proxies'] = proxies
+        
+        return config
+
+    def generate_provider_config(self):
+        """Generate config dengan proxy provider (template asli)"""
+        return yaml.safe_load(self.config_template)
+
+    def generate_proxies_provider_file(self, proxies):
+        """Generate file akun.yaml untuk proxy provider"""
+        return {'proxies': proxies}
+
+    def save_config(self, config, filename):
+        """Save config ke file YAML"""
+        with open(filename, 'w', encoding='utf-8') as f:
+            yaml.dump(config, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+        print(f"[✓] Config saved: {filename}")
+
+    def save_proxies_list(self, proxies, filename='akun.yaml'):
+        """Save proxies list untuk provider"""
+        data = self.generate_proxies_provider_file(proxies)
+        with open(filename, 'w', encoding='utf-8') as f:
+            yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+        print(f"[✓] Proxies provider saved: {filename}")
+
+
+def print_banner():
+    print("""
+╔══════════════════════════════════════════════════════════╗
+║     CLASH/MIHOMO CONFIG GENERATOR FOR TERMUX             ║
+║     Support: VMess, VLESS, Trojan, SS, SSR,              ║
+║              Hysteria(2), TUIC, WireGuard, SOCKS, HTTP   ║
+╚══════════════════════════════════════════════════════════╝
+""")
+
+
+def main():
+    print_banner()
+    
+    generator = ClashConfigGenerator()
+    
+    print("Pilih mode:")
+    print("1. Generate dari file subscription (txt)")
+    print("2. Generate dari single URL")
+    print("3. Generate dari clipboard (Termux)")
+    print()
+    print("Format output:")
+    print("a. Full Config (tanpa proxy provider)")
+    print("b. Proxy Provider Config + akun.yaml")
+    print()
+    
+    mode = input("Pilih mode (1/2/3): ").strip()
+    output_format = input("Pilih format output (a/b): ").strip().lower()
+    
+    proxies = []
+    
+    if mode == '1':
+        filename = input("Masukkan nama file subscription (.txt): ").strip()
+        if not os.path.exists(filename):
+            print(f"[!] File {filename} tidak ditemukan!")
+            return
+        
+        with open(filename, 'r', encoding='utf-8') as f:
+            data = f.read()
+        proxies = generator.parse_subscription(data)
+        
+    elif mode == '2':
+        url = input("Masukkan URL: ").strip()
+        proxy = generator.parse_url(url)
+        if proxy:
+            proxies = [proxy]
+        
+    elif mode == '3':
+        # Untuk Termux, gunakan termux-clipboard-get
+        try:
+            import subprocess
+            result = subprocess.run(['termux-clipboard-get'], capture_output=True, text=True)
+            data = result.stdout
+            proxies = generator.parse_subscription(data)
+        except Exception as e:
+            print(f"[!] Error accessing clipboard: {e}")
+            print("[!] Pastikan termux-api terinstall")
+            return
+    
+    if not proxies:
+        print("[!] Tidak ada proxy yang berhasil diparse!")
+        return
+    
+    print(f"[+] Berhasil parse {len(proxies)} proxies")
+    
+    # Print daftar proxies
+    print("\n[+] Daftar Proxies:")
+    for i, p in enumerate(proxies, 1):
+        print(f"  {i}. {p['name']} ({p['type']}) - {p['server']}:{p['port']}")
+    
+    if output_format == 'a':
+        # Full config
+        config = generator.generate_full_config(proxies)
+        generator.save_config(config, 'config.yaml')
+        print("\n[✓] Full config berhasil dibuat: config.yaml")
+        
+    elif output_format == 'b':
+        # Proxy provider config
+        config = generator.generate_provider_config()
+        generator.save_config(config, 'config.yaml')
+        generator.save_proxies_list(proxies, 'akun.yaml')
+        print("\n[✓] Proxy provider config berhasil dibuat:")
+        print("    - config.yaml (main config)")
+        print("    - akun.yaml (proxy list)")
+    
+    print("\n[!] Catatan:")
+    print("    - Pastikan folder rule_provider sudah dibuat")
+    print("    - Jalankan: mkdir -p rule_provider")
+
+
+if __name__ == '__main__':
+    main()
 ```
 
-4. Perubahan Penting
-- Hapus emoji dari nama group (bisa cause encoding issues)
-- Hapus spasi ganti dengan hyphen: `AdBlock-Plus`
-- Konsistensi case-sensitive: `Proxy` bukan `proxy` atau `PROXY`
-- Urutan definisi: Group yang direferensi di RULE-SET harus didefinisikan sebelumnya
+Fitur yang Didukung:
 
-Error "proxy [Proxy] not found" seharusnya tidak muncul lagi karena semua nama di `rules` sekarang persis sama dengan nama di `proxy-groups`.
+Protocol	| Support |	Keterangan	
+:--- | :--- | :---
+VMess |	✅	| WS, gRPC, TLS	
+VLESS	| ✅ |	Reality, XTLS, WS, gRPC	
+Trojan	| ✅ |	WS, gRPC, TLS	
+Shadowsocks |	✅ |	SIP002, Plugin Obfs	
+ShadowsocksR	| ✅ |	Semua method	
+Hysteria	| ✅	| Hysteria 1 & 2	
+TUIC | 	✅ |	v5	
+WireGuard |	✅	| WG URL format	
+SOCKS5 |	✅	| Dengan auth	
+HTTP	| ✅	| Dengan TLS	
+
+Mode Output:
+
+- Mode A (Full Config): Semua proxy langsung di `config.yaml`, tanpa proxy provider
+- Mode B (Proxy Provider): Config terpisah - `config.yaml` (template) + `akun.yaml` (daftar proxy)
+
+Tips:
+- Untuk clipboard mode, install: `pkg install termux-api`
