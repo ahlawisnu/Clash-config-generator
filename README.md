@@ -6,7 +6,7 @@ Script: `clash_generator.py`
 # -*- coding: utf-8 -*-
 
 # Script Python untuk Termux - Generator Konfigurasi Clash/Mihomo
-# Update: Hapus file subscription, tambah proxies ke MANUAL group
+# ＡＨＬＡ｜ https://ahlawisnu.github.io
 
 import os
 import re
