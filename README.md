@@ -1,13 +1,12 @@
-Berikut adalah script Python lengkap untuk Termux yang dapat kamu gunakan untuk generate konfigurasi Clash/Mihomo dengan 2 fitur utama yang diminta:
-
 Script: `clash_generator.py`
+
 
 ```python
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 # Script Python untuk Termux - Generator Konfigurasi Clash/Mihomo
-# Fitur: Full Config & Proxy Provider dengan semua jenis protocol
+# Update: Hapus file subscription, tambah proxies ke MANUAL group
 
 import os
 import re
@@ -16,6 +15,7 @@ import yaml
 import base64
 import urllib.parse
 from urllib.parse import urlparse, parse_qs
+from datetime import datetime
 
 class ClashConfigGenerator:
     def __init__(self):
@@ -282,6 +282,26 @@ rules:
         
         self.proxies = []
         self.proxy_counter = 0
+        self.used_names = set()
+
+    def get_unique_name(self, base_name, protocol):
+        """Generate unique name without override"""
+        if base_name and base_name not in self.used_names:
+            self.used_names.add(base_name)
+            return base_name
+        
+        timestamp = datetime.now().strftime("%H%M%S")
+        counter = 0
+        while True:
+            if counter == 0:
+                new_name = f"{protocol}-{timestamp}"
+            else:
+                new_name = f"{protocol}-{timestamp}-{counter}"
+            
+            if new_name not in self.used_names:
+                self.used_names.add(new_name)
+                return new_name
+            counter += 1
 
     def decode_base64(self, data):
         """Decode base64 dengan padding handling"""
@@ -306,8 +326,9 @@ rules:
             
             data = json.loads(json_str)
             
+            base_name = data.get('ps', '')
             proxy = {
-                'name': data.get('ps', f'VMess-{self.proxy_counter}'),
+                'name': self.get_unique_name(base_name, 'VMess'),
                 'type': 'vmess',
                 'server': data.get('add', ''),
                 'port': int(data.get('port', 443)),
@@ -320,7 +341,6 @@ rules:
                 'network': data.get('net', 'tcp'),
             }
             
-            # Handle ws/grpc network
             if proxy['network'] == 'ws':
                 proxy['ws-opts'] = {
                     'path': data.get('path', '/'),
@@ -352,8 +372,9 @@ rules:
             
             query = parse_qs(parsed.query)
             
+            base_name = urllib.parse.unquote(parsed.fragment) if parsed.fragment else ''
             proxy = {
-                'name': urllib.parse.unquote(parsed.fragment) if parsed.fragment else f'VLESS-{self.proxy_counter}',
+                'name': self.get_unique_name(base_name, 'VLESS'),
                 'type': 'vless',
                 'server': server,
                 'port': port,
@@ -365,11 +386,9 @@ rules:
                 'network': query.get('type', ['tcp'])[0],
             }
             
-            # Handle flow
             if 'flow' in query:
                 proxy['flow'] = query['flow'][0]
             
-            # Handle ws/grpc
             if proxy['network'] == 'ws':
                 proxy['ws-opts'] = {
                     'path': query.get('path', ['/'])[0],
@@ -382,7 +401,6 @@ rules:
                     'grpc-service-name': query.get('serviceName', [''])[0]
                 }
             
-            # Handle reality
             if 'security' in query and query['security'][0] == 'reality':
                 proxy['reality-opts'] = {
                     'public-key': query.get('pbk', [''])[0],
@@ -409,8 +427,9 @@ rules:
             
             query = parse_qs(parsed.query)
             
+            base_name = urllib.parse.unquote(parsed.fragment) if parsed.fragment else ''
             proxy = {
-                'name': urllib.parse.unquote(parsed.fragment) if parsed.fragment else f'Trojan-{self.proxy_counter}',
+                'name': self.get_unique_name(base_name, 'Trojan'),
                 'type': 'trojan',
                 'server': server,
                 'port': port,
@@ -449,54 +468,49 @@ rules:
             if not url.startswith('ss://'):
                 return None
             
-            # Handle SIP002 format
-            if url.startswith('ss://'):
-                parsed = urlparse(url)
-                
-                # Decode base64 userinfo
-                userinfo = parsed.username
-                if userinfo:
-                    # base64 encoded method:password
-                    decoded = self.decode_base64(userinfo)
-                    if decoded and ':' in decoded:
-                        method, password = decoded.split(':', 1)
-                    else:
-                        return None
+            parsed = urlparse(url)
+            
+            userinfo = parsed.username
+            if userinfo:
+                decoded = self.decode_base64(userinfo)
+                if decoded and ':' in decoded:
+                    method, password = decoded.split(':', 1)
                 else:
                     return None
-                
-                server = parsed.hostname
-                port = parsed.port
-                
-                proxy = {
-                    'name': urllib.parse.unquote(parsed.fragment) if parsed.fragment else f'SS-{self.proxy_counter}',
-                    'type': 'ss',
-                    'server': server,
-                    'port': port,
-                    'cipher': method,
-                    'password': password,
-                }
-                
-                # Handle plugin
-                query = parse_qs(parsed.query)
-                if 'plugin' in query:
-                    plugin_str = query['plugin'][0]
-                    if 'obfs' in plugin_str:
-                        # simple-obfs
-                        parts = plugin_str.split(';')
-                        proxy['plugin'] = 'obfs'
-                        for part in parts[1:]:
-                            if '=' in part:
-                                key, val = part.split('=', 1)
-                                if key == 'obfs':
-                                    proxy['plugin-opts'] = {'mode': val}
-                                elif key == 'obfs-host':
-                                    if 'plugin-opts' not in proxy:
-                                        proxy['plugin-opts'] = {}
-                                    proxy['plugin-opts']['host'] = val
-                
-                self.proxy_counter += 1
-                return proxy
+            else:
+                return None
+            
+            server = parsed.hostname
+            port = parsed.port
+            
+            base_name = urllib.parse.unquote(parsed.fragment) if parsed.fragment else ''
+            proxy = {
+                'name': self.get_unique_name(base_name, 'SS'),
+                'type': 'ss',
+                'server': server,
+                'port': port,
+                'cipher': method,
+                'password': password,
+            }
+            
+            query = parse_qs(parsed.query)
+            if 'plugin' in query:
+                plugin_str = query['plugin'][0]
+                if 'obfs' in plugin_str:
+                    parts = plugin_str.split(';')
+                    proxy['plugin'] = 'obfs'
+                    for part in parts[1:]:
+                        if '=' in part:
+                            key, val = part.split('=', 1)
+                            if key == 'obfs':
+                                proxy['plugin-opts'] = {'mode': val}
+                            elif key == 'obfs-host':
+                                if 'plugin-opts' not in proxy:
+                                    proxy['plugin-opts'] = {}
+                                proxy['plugin-opts']['host'] = val
+            
+            self.proxy_counter += 1
+            return proxy
         except Exception as e:
             print(f"Error parsing SS: {e}")
             return None
@@ -511,7 +525,6 @@ rules:
             if not decoded:
                 return None
             
-            # Format: server:port:protocol:method:obfs:password_base64/?params_base64
             match = re.match(r'([^:]+):(\d+):([^:]+):([^:]+):([^:]+):([^/]+)/?\?(.*)', decoded)
             if not match:
                 return None
@@ -519,15 +532,15 @@ rules:
             server, port, protocol, method, obfs, password_b64, params = match.groups()
             password = self.decode_base64(password_b64) or password_b64
             
-            # Parse params
             param_dict = {}
             for param in params.split('&'):
                 if '=' in param:
                     k, v = param.split('=', 1)
                     param_dict[k] = self.decode_base64(v) or v
             
+            base_name = param_dict.get('remarks', '')
             proxy = {
-                'name': param_dict.get('remarks', f'SSR-{self.proxy_counter}'),
+                'name': self.get_unique_name(base_name, 'SSR'),
                 'type': 'ssr',
                 'server': server,
                 'port': int(port),
@@ -556,8 +569,9 @@ rules:
                 
                 query = parse_qs(parsed.query)
                 
+                base_name = urllib.parse.unquote(parsed.fragment) if parsed.fragment else ''
                 proxy = {
-                    'name': urllib.parse.unquote(parsed.fragment) if parsed.fragment else f'Hysteria2-{self.proxy_counter}',
+                    'name': self.get_unique_name(base_name, 'HY2'),
                     'type': 'hysteria2',
                     'server': server,
                     'port': port,
@@ -583,8 +597,9 @@ rules:
                 
                 query = parse_qs(parsed.query)
                 
+                base_name = urllib.parse.unquote(parsed.fragment) if parsed.fragment else ''
                 proxy = {
-                    'name': urllib.parse.unquote(parsed.fragment) if parsed.fragment else f'Hysteria-{self.proxy_counter}',
+                    'name': self.get_unique_name(base_name, 'HY1'),
                     'type': 'hysteria',
                     'server': server,
                     'port': port,
@@ -625,8 +640,9 @@ rules:
             
             query = parse_qs(parsed.query)
             
+            base_name = urllib.parse.unquote(parsed.fragment) if parsed.fragment else ''
             proxy = {
-                'name': urllib.parse.unquote(parsed.fragment) if parsed.fragment else f'TUIC-{self.proxy_counter}',
+                'name': self.get_unique_name(base_name, 'TUIC'),
                 'type': 'tuic',
                 'server': server,
                 'port': port,
@@ -662,8 +678,9 @@ rules:
             
             query = parse_qs(parsed.query)
             
+            base_name = urllib.parse.unquote(parsed.fragment) if parsed.fragment else ''
             proxy = {
-                'name': urllib.parse.unquote(parsed.fragment) if parsed.fragment else f'WG-{self.proxy_counter}',
+                'name': self.get_unique_name(base_name, 'WG'),
                 'type': 'wireguard',
                 'server': server,
                 'port': port,
@@ -691,8 +708,9 @@ rules:
         try:
             if url.startswith('socks5://') or url.startswith('socks://'):
                 parsed = urlparse(url)
+                base_name = urllib.parse.unquote(parsed.fragment) if parsed.fragment else ''
                 proxy = {
-                    'name': urllib.parse.unquote(parsed.fragment) if parsed.fragment else f'SOCKS5-{self.proxy_counter}',
+                    'name': self.get_unique_name(base_name, 'SOCKS5'),
                     'type': 'socks5',
                     'server': parsed.hostname,
                     'port': parsed.port,
@@ -707,8 +725,9 @@ rules:
                 
             elif url.startswith('http://') or url.startswith('https://'):
                 parsed = urlparse(url)
+                base_name = urllib.parse.unquote(parsed.fragment) if parsed.fragment else ''
                 proxy = {
-                    'name': urllib.parse.unquote(parsed.fragment) if parsed.fragment else f'HTTP-{self.proxy_counter}',
+                    'name': self.get_unique_name(base_name, 'HTTP'),
                     'type': 'http',
                     'server': parsed.hostname,
                     'port': parsed.port,
@@ -757,7 +776,6 @@ rules:
         """Parse subscription data (base64 atau plain text)"""
         proxies = []
         
-        # Coba decode base64 dulu
         decoded = self.decode_base64(data)
         if decoded:
             lines = decoded.strip().split('\n')
@@ -783,16 +801,26 @@ rules:
         if 'proxy-providers' in config:
             del config['proxy-providers']
         
-        # Update proxy-groups untuk tidak menggunakan provider
+        # Ambil nama-nama proxy untuk dimasukkan ke groups
+        proxy_names = [p['name'] for p in proxies]
+        
+        # Update proxy-groups
         for group in config.get('proxy-groups', []):
+            # Hapus 'use' karena tidak pakai provider
             if 'use' in group:
                 del group['use']
-            # Tambah proxies ke grup yang perlu
+            
+            # Tambah proxies ke group MANUAL dan sejenisnya
             if group.get('type') in ['fallback', 'url-test', 'load-balance']:
-                if 'proxies' not in group:
-                    group['proxies'] = [p['name'] for p in proxies]
+                group['proxies'] = proxy_names
+            
+            # Khusus untuk MANUAL, tambahkan semua proxy names di awal
+            if group.get('name') == 'MANUAL':
+                # Insert proxy names setelah BEST-PING, FALLBACK, LB
+                existing = group.get('proxies', [])
+                group['proxies'] = existing[:3] + proxy_names + existing[3:]
         
-        # Tambah proxies
+        # Tambah proxies ke config
         config['proxies'] = proxies
         
         return config
@@ -805,18 +833,67 @@ rules:
         """Generate file akun.yaml untuk proxy provider"""
         return {'proxies': proxies}
 
+    def generate_proxies_only(self, proxies):
+        """Generate proxies only (tanpa config lain)"""
+        return {'proxies': proxies}
+
     def save_config(self, config, filename):
-        """Save config ke file YAML"""
+        """Save config ke file YAML dengan check overwrite"""
+        if os.path.exists(filename):
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            name, ext = os.path.splitext(filename)
+            filename = f"{name}_{timestamp}{ext}"
+            print(f"[!] File exists, saved as: {filename}")
+        
         with open(filename, 'w', encoding='utf-8') as f:
             yaml.dump(config, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
         print(f"[✓] Config saved: {filename}")
+        return filename
 
     def save_proxies_list(self, proxies, filename='akun.yaml'):
-        """Save proxies list untuk provider"""
+        """Save proxies list untuk provider dengan check overwrite"""
         data = self.generate_proxies_provider_file(proxies)
+        
+        if os.path.exists(filename):
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            name, ext = os.path.splitext(filename)
+            filename = f"{name}_{timestamp}{ext}"
+            print(f"[!] File exists, saved as: {filename}")
+        
         with open(filename, 'w', encoding='utf-8') as f:
             yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
         print(f"[✓] Proxies provider saved: {filename}")
+        return filename
+
+
+def get_unique_filename(prompt, default_ext='.yaml'):
+    """Get filename from user dengan auto-generate option"""
+    print(f"\n[?] Masukkan nama file (tanpa ext) atau kosongkan untuk auto-generate:")
+    name = input(f"    Default ext: {default_ext}\n    > ").strip()
+    
+    if not name:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        return f"config_{timestamp}{default_ext}"
+    
+    if not name.endswith(default_ext):
+        name += default_ext
+    
+    return name
+
+
+def multi_input_mode():
+    """Mode input banyak URL/subscription"""
+    print("\n[+] Mode Multi-Input")
+    print("    Masukkan URL/subscription (kosongkan baris untuk selesai):")
+    
+    lines = []
+    while True:
+        line = input("    > ").strip()
+        if not line:
+            break
+        lines.append(line)
+    
+    return '\n'.join(lines)
 
 
 def print_banner():
@@ -834,39 +911,28 @@ def main():
     
     generator = ClashConfigGenerator()
     
-    print("Pilih mode:")
-    print("1. Generate dari file subscription (txt)")
-    print("2. Generate dari single URL")
-    print("3. Generate dari clipboard (Termux)")
-    print()
-    print("Format output:")
-    print("a. Full Config (tanpa proxy provider)")
-    print("b. Proxy Provider Config + akun.yaml")
+    print("Pilih mode input:")
+    print("1. Single URL")
+    print("2. Multi-input (banyak URL/manual)")
+    print("3. Clipboard (Termux)")
     print()
     
     mode = input("Pilih mode (1/2/3): ").strip()
-    output_format = input("Pilih format output (a/b): ").strip().lower()
     
     proxies = []
     
     if mode == '1':
-        filename = input("Masukkan nama file subscription (.txt): ").strip()
-        if not os.path.exists(filename):
-            print(f"[!] File {filename} tidak ditemukan!")
-            return
-        
-        with open(filename, 'r', encoding='utf-8') as f:
-            data = f.read()
-        proxies = generator.parse_subscription(data)
-        
-    elif mode == '2':
         url = input("Masukkan URL: ").strip()
         proxy = generator.parse_url(url)
         if proxy:
             proxies = [proxy]
         
+    elif mode == '2':
+        data = multi_input_mode()
+        if data:
+            proxies = generator.parse_subscription(data)
+        
     elif mode == '3':
-        # Untuk Termux, gunakan termux-clipboard-get
         try:
             import subprocess
             result = subprocess.run(['termux-clipboard-get'], capture_output=True, text=True)
@@ -881,27 +947,47 @@ def main():
         print("[!] Tidak ada proxy yang berhasil diparse!")
         return
     
-    print(f"[+] Berhasil parse {len(proxies)} proxies")
+    print(f"\n[+] Berhasil parse {len(proxies)} proxies")
     
-    # Print daftar proxies
     print("\n[+] Daftar Proxies:")
     for i, p in enumerate(proxies, 1):
         print(f"  {i}. {p['name']} ({p['type']}) - {p['server']}:{p['port']}")
     
+    print("\n" + "="*50)
+    print("Pilih format output:")
+    print("a. Full Config (tanpa proxy provider)")
+    print("b. Proxy Provider Config + akun.yaml")
+    print("c. Proxies ONLY (hanya daftar proxy)")
+    print()
+    
+    output_format = input("Pilih format (a/b/c): ").strip().lower()
+    
     if output_format == 'a':
-        # Full config
         config = generator.generate_full_config(proxies)
-        generator.save_config(config, 'config.yaml')
-        print("\n[✓] Full config berhasil dibuat: config.yaml")
+        filename = get_unique_filename("Nama file config", ".yaml")
+        saved_file = generator.save_config(config, filename)
+        print(f"\n[✓] Full config berhasil dibuat: {saved_file}")
         
     elif output_format == 'b':
-        # Proxy provider config
         config = generator.generate_provider_config()
-        generator.save_config(config, 'config.yaml')
-        generator.save_proxies_list(proxies, 'akun.yaml')
-        print("\n[✓] Proxy provider config berhasil dibuat:")
-        print("    - config.yaml (main config)")
-        print("    - akun.yaml (proxy list)")
+        
+        print("\n[?] Nama file untuk config utama:")
+        config_file = get_unique_filename("Config file", ".yaml")
+        generator.save_config(config, config_file)
+        
+        print("\n[?] Nama file untuk proxy list (akun.yaml):")
+        proxy_file = get_unique_filename("Proxy list", ".yaml")
+        generator.save_proxies_list(proxies, proxy_file)
+        
+        print(f"\n[✓] Proxy provider config berhasil dibuat:")
+        print(f"    - {config_file} (main config)")
+        print(f"    - {proxy_file} (proxy list)")
+        
+    elif output_format == 'c':
+        config = generator.generate_proxies_only(proxies)
+        filename = get_unique_filename("Nama file proxies", ".yaml")
+        saved_file = generator.save_config(config, filename)
+        print(f"\n[✓] Proxies only berhasil dibuat: {saved_file}")
     
     print("\n[!] Catatan:")
     print("    - Pastikan folder rule_provider sudah dibuat")
@@ -910,6 +996,36 @@ def main():
 
 if __name__ == '__main__':
     main()
+```
+
+
+Cara Penggunaan di Termux:
+
+1. Install Dependencies:
+
+```bash
+pkg update && pkg upgrade
+pkg install python python-pip
+pip install pyyaml
+```
+
+2. Simpan Script:
+
+```bash
+nano clash_generator.py
+# Paste script di atas, lalu save (Ctrl+X, Y, Enter)
+```
+
+3. Berikan Permission:
+
+```bash
+chmod +x clash_generator.py
+```
+
+4. Jalankan Script:
+
+```bash
+python clash_generator.py
 ```
 
 Fitur yang Didukung:
@@ -927,10 +1043,68 @@ WireGuard |	✅	| WG URL format
 SOCKS5 |	✅	| Dengan auth	
 HTTP	| ✅	| Dengan TLS	
 
-Mode Output:
 
-- Mode A (Full Config): Semua proxy langsung di `config.yaml`, tanpa proxy provider
-- Mode B (Proxy Provider): Config terpisah - `config.yaml` (template) + `akun.yaml` (daftar proxy)
+Fitur:
 
-Tips:
-- Untuk clipboard mode, install: `pkg install termux-api`
+1. Mode Input 
+
+```
+  				1. Single 
+  				2. Multi-input
+  				3. Clipboard
+```
+
+2. Proxy Group MANUAL (Full Config Mode)
+Saat memilih Mode A (Full Config), proxies otomatis masuk ke group `MANUAL`:
+
+```yaml
+proxy-groups:
+  - name: MANUAL
+    type: select
+    proxies:
+      - BEST-PING
+      - FALLBACK
+      - LB
+      - VMess-143022      # ← Proxy 1
+      - VLESS-143023      # ← Proxy 2
+      - Trojan-143024     # ← Proxy 3
+      # ... semua proxy lainnya
+    
+  - name: FALLBACK
+    type: fallback
+    proxies:
+      - VMess-143022      # ← Semua proxy juga masuk sini
+      - VLESS-143023
+      - Trojan-143024
+    
+  - name: BEST-PING
+    type: url-test
+    proxies:
+      - VMess-143022      # ← Semua proxy juga masuk sini
+      - VLESS-143023
+      - Trojan-143024
+```
+
+3. Flow Full Config Mode:
+1. Hapus `proxy-providers`
+2. Hapus `use:` dari semua groups
+3. Masukkan semua proxy names ke:
+   - `MANUAL` (setelah BEST-PING, FALLBACK, LB)
+   - `FALLBACK`, `BEST-PING`, `LB` (untuk health-check)
+4. Tambah section `proxies:` di akhir config
+
+Cara Pakai:
+
+```bash
+python clash_generator.py
+
+# Pilih mode:
+# 1 = Single URL
+# 2 = Multi-input (banyak URL)
+# 3 = Clipboard
+
+# Pilih output:
+# a = Full config (proxies masuk ke MANUAL group)
+# b = Proxy provider mode
+# c = Proxies only
+```
