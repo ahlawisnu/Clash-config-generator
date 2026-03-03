@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Script Python untuk Termux - Generator Konfigurasi Clash/Mihomo
-# Update: Hapus file subscription, tambah proxies ke MANUAL group
+# ＡＨＬＡ｜ https://ahlawisnu.github.io
 
 import os
 import re
@@ -25,37 +25,6 @@ class ClashConfigGenerator:
       interval: 300
 
 proxy-groups:
-  - name: MANUAL
-    type: select
-    proxies:
-      - BEST-PING
-      - FALLBACK
-      - LB
-    use:
-      - SERVER
-    
-  - name: UMUM
-    type: select
-    proxies:
-      - MANUAL
-      - BEST-PING
-      - FALLBACK
-      - LB
-    use:
-      - SERVER
-    
-  - name: FINAL
-    type: select
-    proxies:
-      - UMUM
-      - DIRECT
-      
-  - name: ADBLOCK+
-    type: select
-    proxies:
-      - REJECT
-      - FALLBACK
-
   - name: FALLBACK
     type: fallback
     use:
@@ -79,6 +48,35 @@ proxy-groups:
     url: http://www.gstatic.com/generate_204
     interval: 300
     
+  - name: ADBLOCK+
+    type: select
+    proxies:
+      - REJECT
+      - FALLBACK
+
+  - name: MANUAL
+    type: select
+    proxies:
+      - BEST-PING
+      - FALLBACK
+      - LB
+    use:
+      - SERVER
+    
+  - name: UMUM
+    type: select
+    proxies:
+      - MANUAL
+      - BEST-PING
+      - FALLBACK
+      - LB
+    
+  - name: FINAL
+    type: select
+    proxies:
+      - UMUM
+      - DIRECT
+      
 port: 7893
 socks-port: 7891
 redir-port: 7892
