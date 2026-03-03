@@ -1,7 +1,3 @@
-Script: `clash_generator.py`
-
-
-```python
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
@@ -29,37 +25,6 @@ class ClashConfigGenerator:
       interval: 300
 
 proxy-groups:
-  - name: MANUAL
-    type: select
-    proxies:
-      - BEST-PING
-      - FALLBACK
-      - LB
-    use:
-      - SERVER
-    
-  - name: UMUM
-    type: select
-    proxies:
-      - MANUAL
-      - BEST-PING
-      - FALLBACK
-      - LB
-    use:
-      - SERVER
-    
-  - name: FINAL
-    type: select
-    proxies:
-      - UMUM
-      - DIRECT
-      
-  - name: ADBLOCK+
-    type: select
-    proxies:
-      - REJECT
-      - FALLBACK
-
   - name: FALLBACK
     type: fallback
     use:
@@ -83,6 +48,35 @@ proxy-groups:
     url: http://www.gstatic.com/generate_204
     interval: 300
     
+  - name: ADBLOCK+
+    type: select
+    proxies:
+      - REJECT
+      - FALLBACK
+
+  - name: MANUAL
+    type: select
+    proxies:
+      - BEST-PING
+      - FALLBACK
+      - LB
+    use:
+      - SERVER
+    
+  - name: UMUM
+    type: select
+    proxies:
+      - MANUAL
+      - BEST-PING
+      - FALLBACK
+      - LB
+    
+  - name: FINAL
+    type: select
+    proxies:
+      - UMUM
+      - DIRECT
+      
 port: 7893
 socks-port: 7891
 redir-port: 7892
@@ -996,115 +990,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-```
-
-
-Cara Penggunaan di Termux:
-
-1. Install Dependencies:
-
-```bash
-pkg update && pkg upgrade
-pkg install python python-pip
-pip install pyyaml
-```
-
-2. Simpan Script:
-
-```bash
-nano clash_generator.py
-# Paste script di atas, lalu save (Ctrl+X, Y, Enter)
-```
-
-3. Berikan Permission:
-
-```bash
-chmod +x clash_generator.py
-```
-
-4. Jalankan Script:
-
-```bash
-python clash_generator.py
-```
-
-Fitur yang Didukung:
-
-Protocol	| Support |	Keterangan	
-:--- | :--- | :---
-VMess |	✅	| WS, gRPC, TLS	
-VLESS	| ✅ |	Reality, XTLS, WS, gRPC	
-Trojan	| ✅ |	WS, gRPC, TLS	
-Shadowsocks |	✅ |	SIP002, Plugin Obfs	
-ShadowsocksR	| ✅ |	Semua method	
-Hysteria	| ✅	| Hysteria 1 & 2	
-TUIC | 	✅ |	v5	
-WireGuard |	✅	| WG URL format	
-SOCKS5 |	✅	| Dengan auth	
-HTTP	| ✅	| Dengan TLS	
-
-
-Fitur:
-
-1. Mode Input 
-
-```
-  				1. Single 
-  				2. Multi-input
-  				3. Clipboard
-```
-
-2. Proxy Group MANUAL (Full Config Mode)
-Saat memilih Mode A (Full Config), proxies otomatis masuk ke group `MANUAL`:
-
-```yaml
-proxy-groups:
-  - name: MANUAL
-    type: select
-    proxies:
-      - BEST-PING
-      - FALLBACK
-      - LB
-      - VMess-143022      # ← Proxy 1
-      - VLESS-143023      # ← Proxy 2
-      - Trojan-143024     # ← Proxy 3
-      # ... semua proxy lainnya
-    
-  - name: FALLBACK
-    type: fallback
-    proxies:
-      - VMess-143022      # ← Semua proxy juga masuk sini
-      - VLESS-143023
-      - Trojan-143024
-    
-  - name: BEST-PING
-    type: url-test
-    proxies:
-      - VMess-143022      # ← Semua proxy juga masuk sini
-      - VLESS-143023
-      - Trojan-143024
-```
-
-3. Flow Full Config Mode:
-1. Hapus `proxy-providers`
-2. Hapus `use:` dari semua groups
-3. Masukkan semua proxy names ke:
-   - `MANUAL` (setelah BEST-PING, FALLBACK, LB)
-   - `FALLBACK`, `BEST-PING`, `LB` (untuk health-check)
-4. Tambah section `proxies:` di akhir config
-
-Cara Pakai:
-
-```bash
-python clash_generator.py
-
-# Pilih mode:
-# 1 = Single URL
-# 2 = Multi-input (banyak URL)
-# 3 = Clipboard
-
-# Pilih output:
-# a = Full config (proxies masuk ke MANUAL group)
-# b = Proxy provider mode
-# c = Proxies only
-```
